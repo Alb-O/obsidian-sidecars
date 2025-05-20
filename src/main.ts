@@ -20,29 +20,8 @@ export default class SidecarPlugin extends Plugin {
     // Inject or remove CSS for hiding sidecar files in explorer
     this.updateSidecarHideCss();
 
-    if (registerRenameDeleteHandlers) {
-      registerRenameDeleteHandlers(this, () => ({
-        isNote: (path: string) => this.isMonitoredFile(path) && !this.isSidecarFile(path),
-        isPathIgnored: (path: string) => this.isSidecarFile(path) || !this.isFileAllowedByFolderLists(path),
-        shouldHandleRenames: true,
-        shouldHandleDeletions: true,
-        shouldRenameAttachmentFiles: true,
-        shouldDeleteConflictingAttachments: true,
-        emptyAttachmentFolderBehavior: EmptyAttachmentFolderBehavior.Keep,
-        shouldRenameAttachmentFolder: false,
-        getAttachmentPath: (notePath: string) => this.getSidecarPath(notePath),
-        isAttachmentOf: (attachmentPath: string, notePath: string) => {
-          if (!this.isSidecarFile(attachmentPath)) return false;
-          const sourcePath = this.getSourcePathFromSidecar(attachmentPath);
-          return sourcePath === notePath;
-        },
-      } as Partial<RenameDeleteHandlerSettings> & {
-        getAttachmentPath: (notePath: string) => string;
-        isAttachmentOf: (attachmentPath: string, notePath: string) => boolean;
-      }));
-    } else {
-      console.warn('Sidecar Plugin: rename/delete handler not available; using manual handlers.');
-    }
+    // Dev-utils rename/delete integration removed due to conflicts; using manual handlers exclusively
+    console.warn('Sidecar Plugin: using manual rename/delete handlers only.');
 
     this.registerDirectEventHandlers();
     this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
