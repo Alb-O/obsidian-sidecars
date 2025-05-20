@@ -1,7 +1,8 @@
 {
 	"name": "sidecars",
-	"version": "0.0.1",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",  "main": "src/main.js",
+	"version": "0.0.2",
+	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"main": "src/main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
