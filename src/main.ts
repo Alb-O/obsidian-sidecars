@@ -1,10 +1,9 @@
-// src/main.ts
-import { App, Notice, Plugin, PluginSettingTab, TAbstractFile, TFile } from 'obsidian';
+import { Notice, Plugin } from 'obsidian';
 import { registerRenameDeleteHandlers, EmptyAttachmentFolderBehavior, type RenameDeleteHandlerSettings } from 'obsidian-dev-utils/obsidian/RenameDeleteHandler';
 import { SidecarSettingTab } from './settings';
 import { handleFileCreate, handleFileDelete, handleFileRename } from './sidecar-events';
 import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSidecar, isFileAllowedByFolderLists } from './utils';
-import type { SidecarPluginSettings } from './types';
+import type { SidecarPluginSettings } from './settings';
 
 const DEFAULT_SETTINGS: SidecarPluginSettings = {
   monitoredExtensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'pdf', 'mp3', 'mp4', 'mov', 'wav', 'webm'],
@@ -75,6 +74,7 @@ export default class SidecarPlugin extends Plugin {
   }
 
   async loadSettings() {
+    // Load user settings, using defaults only for unspecified properties
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 

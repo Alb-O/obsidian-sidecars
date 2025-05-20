@@ -1,4 +1,3 @@
-// src/sidecar-events.ts
 import { Notice, TAbstractFile, TFile } from 'obsidian';
 import type SidecarPlugin from './main';
 
@@ -38,10 +37,20 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
     const newPath = file.path;
     if (plugin.isMonitoredFile(oldPath) && !plugin.isSidecarFile(oldPath)) {
       const oldSidecarPath = plugin.getSidecarPath(oldPath);
+      // Handle folder-level rename: if sidecar no longer exists at old path but exists at new path, skip further handling
+      const newSidecarPath = plugin.getSidecarPath(newPath);
+      if (!plugin.app.vault.getAbstractFileByPath(oldSidecarPath) && plugin.app.vault.getAbstractFileByPath(newSidecarPath)) {
+        return;
+      }
       const oldSidecarFile = plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
       if (oldSidecarFile instanceof TFile) {
         if (plugin.isMonitoredFile(newPath)) {
           const newSidecarPath = plugin.getSidecarPath(newPath);
+          const existingSidecar = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
+          if (existingSidecar && existingSidecar.path === oldSidecarFile.path) {
+            // Sidecar already moved by folder rename; no action needed
+            return;
+          }
           try {
             const existingFileAtNewSidecarPath = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
             if (existingFileAtNewSidecarPath && existingFileAtNewSidecarPath.path !== oldSidecarFile.path) {
@@ -54,7 +63,12 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
             }
           } catch (error) {
             console.error(`Sidecar Plugin: Error renaming sidecar file from ${oldSidecarPath} to ${newSidecarPath}: `, error);
-            new Notice(`Error renaming sidecar for ${newPath}`);
+            // Only notify error if the file itself was renamed (basename changed), not a parent folder rename
+            const oldBase = oldPath.split('/').pop();
+            const newBase = newPath.split('/').pop();
+            if (oldBase !== newBase) {
+              new Notice(`Error renaming sidecar for ${newPath}`);
+            }
           }
         } else {
           try {
@@ -74,6 +88,18 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
           } catch (error) {
             console.error(`Sidecar Plugin: Error creating sidecar for renamed file ${newSidecarPath}: `, error);
           }
+        }
+      }
+    }
+    // Handle files moved into monitored folder from non-monitored location
+    else if (plugin.isMonitoredFile(newPath) && !plugin.isMonitoredFile(oldPath)) {
+      const sidecarPath = plugin.getSidecarPath(newPath);
+      if (!plugin.app.vault.getAbstractFileByPath(sidecarPath)) {
+        try {
+          await plugin.app.vault.create(sidecarPath, `%% Sidecar for ${file.name} %%\n\n`);
+          new Notice(`Created sidecar for moved file: ${sidecarPath.split('/').pop()}`);
+        } catch (error) {
+          console.error(`Sidecar Plugin: Error creating sidecar for moved file ${sidecarPath}: `, error);
         }
       }
     }
