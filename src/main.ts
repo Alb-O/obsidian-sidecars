@@ -188,6 +188,12 @@ export default class SidecarPlugin extends Plugin {
       }
     }
 
+    // Phase 3: Refresh appearance and CSS after a small delay to allow UI to catch up
+    setTimeout(() => {
+      this.updateSidecarHideCss();
+      this.updateSidecarFileAppearance();
+    }, 50);
+
     // Final log summary
     console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}, Deleted non-monitored sources: ${deletedNonMonitoredSourceCount}`);
 
