@@ -378,7 +378,7 @@ export class SidecarSettingTab extends PluginSettingTab {
             .then(setting => {
                 const box = new MultipleTextComponent((setting as any).controlEl as HTMLElement);
                 box
-                    .setPlaceholder('/Archive/*\n/Templates/**')
+                    .setPlaceholder('/Templates/\n*/archive/*')
                     .setValue(this.plugin.settings.blacklistFolders || [])
                     .onChange(async (value) => {
                         this.plugin.settings.blacklistFolders = value.filter(item => item.trim().length > 0);
@@ -392,7 +392,7 @@ export class SidecarSettingTab extends PluginSettingTab {
             .then(setting => {
                 const box = new MultipleTextComponent((setting as any).controlEl as HTMLElement);
                 box
-                    .setPlaceholder('/Media/**')
+                    .setPlaceholder('*/attachments/*')
                     .setValue(this.plugin.settings.whitelistFolders || [])
                     .onChange(async (value) => {
                         this.plugin.settings.whitelistFolders = value.filter(item => item.trim().length > 0);
@@ -404,7 +404,11 @@ export class SidecarSettingTab extends PluginSettingTab {
             .setName('Use regular expressions for folder lists')
             .setDesc((() => {
                 const frag = document.createDocumentFragment();
-                frag.append('If enabled, folder patterns are treated as full regular expressions. If disabled, only ');
+                frag.append('If enabled, folder patterns are treated as full regular expressions (e.g. ');
+                frag.appendChild(document.createElement('code')).textContent = '.';
+                frag.append(' and ');
+                frag.appendChild(document.createElement('code')).textContent = '^';
+                frag.append(' are supported). If disabled, only ');
                 frag.appendChild(document.createElement('code')).textContent = '*';
                 frag.append(' is supported as a wildcard for any depth (e.g. ');
                 frag.appendChild(document.createElement('code')).textContent = '*/Media/*';
