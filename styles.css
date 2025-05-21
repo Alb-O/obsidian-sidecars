@@ -54,3 +54,22 @@
 .sidecar-notice-value {
   font-weight: bold;
 }
+
+/* Prevent double .md tag for sidecars */
+.nav-file-title[data-path$='.side.md'] .nav-file-tag:not(.sidecar-tag) {
+  display: none !important;
+}
+
+.nav-file-tag.sidecar-tag {
+  color: var(--text-accent);
+}
+
+/* Only apply opacity if dimSidecarsInExplorer is enabled. The plugin should toggle this class on the element. */
+.nav-file-tag.sidecar-tag.dimmed {
+  opacity: var(--link-unresolved-opacity);
+}
+
+.nav-file-title[data-path$='.side.md']:hover .nav-file-tag.sidecar-tag.dimmed,
+.nav-file-title[data-path$='.side.md'].is-active .nav-file-tag.sidecar-tag.dimmed {
+  opacity: 1;
+}

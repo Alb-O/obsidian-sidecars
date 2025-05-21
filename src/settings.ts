@@ -243,8 +243,8 @@ export class SidecarSettingTab extends PluginSettingTab {
                     this.plugin.settings.preventDraggingSidecars = value;
                     await this.plugin.saveSettings();
                     // Optionally, trigger observer update immediately
-                    if (this.plugin.updateSidecarDraggableObserver) {
-                        this.plugin.updateSidecarDraggableObserver();
+                    if (this.plugin.updateSidecarFileAppearance) { // Changed from updateSidecarDraggableObserver
+                        this.plugin.updateSidecarFileAppearance(); // Changed from updateSidecarDraggableObserver
                     }
                 }));
 

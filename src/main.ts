@@ -1,58 +1,23 @@
 import { Notice, Plugin, TFile } from 'obsidian';
 import { SidecarSettingTab } from './settings';
-import { handleFileCreate, handleFileDelete, handleFileRename } from './sidecar-events';
-import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSidecar, isFileAllowedByFolderLists } from './utils';
+import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
+import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSidecar } from './utils';
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
+import { updateSidecarFileAppearance, updateSidecarHideCss } from './explorer-style';
 
 export default class SidecarPlugin extends Plugin {
-  sidecarDraggableObserver?: MutationObserver;
+  sidecarAppearanceObserver?: MutationObserver; // Renamed from sidecarDraggableObserver
 
   settings: SidecarPluginSettings;
   public isInitialRevalidating = false; // Flag to manage initial revalidation state
   public hasFinishedInitialLoad = false; // True after initial vault load
 
-  updateSidecarDraggableObserver() {
-    // Remove observer if it exists
-    if (this.sidecarDraggableObserver) {
-      this.sidecarDraggableObserver.disconnect();
-      this.sidecarDraggableObserver = undefined;
-    }
-    // Only activate if setting is enabled
-    if (!this.settings.preventDraggingSidecars) return;
-    this.sidecarDraggableObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node instanceof HTMLElement && node.classList.contains('nav-file-title')) {
-              const dataPath = node.getAttribute('data-path');
-              if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
-                node.setAttribute('draggable', 'false');
-              }
-            }
-          });
-        }
-      }
-      document.querySelectorAll('.nav-file-title').forEach((el) => {
-        if (el instanceof HTMLElement) {
-          const dataPath = el.getAttribute('data-path');
-          if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
-            el.setAttribute('draggable', 'false');
-          }
-        }
-      });
-    });
-    const navContainer = document.querySelector('.nav-files-container, .workspace-leaf-content .nav-files-container');
-    if (navContainer) {
-      this.sidecarDraggableObserver.observe(navContainer, { childList: true, subtree: true });
-    }
-    document.querySelectorAll('.nav-file-title').forEach((el) => {
-      if (el instanceof HTMLElement) {
-        const dataPath = el.getAttribute('data-path');
-        if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
-          el.setAttribute('draggable', 'false');
-        }
-      }
-    });
+  updateSidecarFileAppearance() {
+    updateSidecarFileAppearance(this);
+  }
+
+  updateSidecarHideCss() {
+    updateSidecarHideCss(this);
   }
 
   async onload() {
@@ -62,19 +27,21 @@ export default class SidecarPlugin extends Plugin {
 
     this.addSettingTab(new SidecarSettingTab(this.app, this));
 
-    // Inject or remove CSS for hiding sidecar files in explorer
-    this.updateSidecarHideCss();
-    this.updateSidecarDraggableObserver();
-
     // Dev-utils rename/delete integration removed due to conflicts; using manual handlers exclusively
     console.warn('Sidecar Plugin: using manual rename/delete handlers only.');
 
     this.registerDirectEventHandlers();
     this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
 
-    // Only set up initial revalidation if the setting is enabled
-    if (this.settings.revalidateOnStartup) {
-      this.app.workspace.onLayoutReady(async () => {
+    this.app.workspace.onLayoutReady(async () => {
+      // Delay DOM manipulations to give Obsidian's UI more time to fully render after a full app reload
+      setTimeout(() => {
+        // console.log("Sidecar Plugin: Attempting to update CSS and file appearance after delay.");
+        this.updateSidecarHideCss();
+        this.updateSidecarFileAppearance(); 
+      }, 50); // 50ms delay, can be adjusted if needed
+
+      if (this.settings.revalidateOnStartup) {
         this.isInitialRevalidating = true;
         try {
           await this.revalidateSidecars();
@@ -84,13 +51,13 @@ export default class SidecarPlugin extends Plugin {
           this.isInitialRevalidating = false;
           this.hasFinishedInitialLoad = true;
         }
-      });
-    } else {
-      this.app.workspace.onLayoutReady(() => {
+      } else {
         this.hasFinishedInitialLoad = true;
-      });
-      this.isInitialRevalidating = false;
-    }
+        // Ensure appearance is updated even if revalidation is off
+        // (it's already called above, but good to be explicit if logic changes)
+      }
+    });
+    // Removed updateSidecarHideCss() and updateSidecarFileAppearance() from here
 
     this.addCommand({
       id: 'revalidate-sidecars',
@@ -103,70 +70,15 @@ export default class SidecarPlugin extends Plugin {
     new Notice('Sidecar Plugin loaded.');
   }
 
-  updateSidecarHideCss() {
-    const id = 'sidecar-visibility-style';
-    let styleElement = document.getElementById(id) as HTMLStyleElement | null;
-
-    let styleTextContent = '';
-
-    if (this.settings.hideSidecarsInExplorer) {
-      styleTextContent += `
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
-          display: none !important;
-        }
-      `;
-    } else if (this.settings.dimSidecarsInExplorer) {
-      styleTextContent += `
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
-          color: var(--text-faint) !important;
-        }
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}']:hover,
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'].is-active {
-          color: var(--text-muted) !important;
-        }
-      `;
-    }
-
-    if (this.settings.prependSidecarIndicator) {
-      styleTextContent += `
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}']::before {
-          content: "⮡";
-          padding-left: 0.2em;
-          padding-right: 0.75em;
-        }
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] .tree-item-inner {
-          vertical-align: text-top;
-        }
-        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
-          padding-top: 0px !important;
-          padding-bottom: calc(2 * var(--size-4-1)) !important;
-        }
-      `;
-    }
-
-    if (styleTextContent) {
-      if (!styleElement) {
-        styleElement = document.createElement('style');
-        styleElement.id = id;
-        document.head.appendChild(styleElement);
-      }
-      styleElement.textContent = styleTextContent;
-    } else {
-      if (styleElement) {
-        styleElement.remove();
-      }
-    }
-  }
-
   private registerDirectEventHandlers() {
     this.registerEvent(this.app.vault.on('delete', (file) => handleFileDelete(this, file)));
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => handleFileRename(this, file, oldPath)));
   }
 
   onunload() {
-    if (this.sidecarDraggableObserver) {
-      this.sidecarDraggableObserver.disconnect();
-      this.sidecarDraggableObserver = undefined;
+    if (this.sidecarAppearanceObserver) { // Changed from sidecarDraggableObserver
+      this.sidecarAppearanceObserver.disconnect();
+      this.sidecarAppearanceObserver = undefined;
     }
     new Notice('Sidecar Plugin unloaded.');
   }
@@ -183,6 +95,7 @@ export default class SidecarPlugin extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
     this.updateSidecarHideCss();
+    this.updateSidecarFileAppearance(); // Added this call to refresh appearance on settings change
   }
 
   async revalidateSidecars() {
@@ -261,70 +174,41 @@ export default class SidecarPlugin extends Plugin {
             const sidecarFileToDelete = this.app.vault.getAbstractFileByPath(file.path);
             if (sidecarFileToDelete instanceof TFile) {
               await this.app.vault.delete(sidecarFileToDelete);
-              if (reason === "orphaned (source file missing)" || reason === "malformed name or unidentifiable source" || reason === "source is a folder, not a file") {
-                deletedOrphanCount++;
+              if (reason) {
+                console.log(`Sidecar Plugin: Deleted sidecar ${file.path} during revalidation - ${reason}.`);
               } else {
-                deletedNonMonitoredSourceCount++;
+                console.log(`Sidecar Plugin: Deleted sidecar ${file.path} during revalidation.`);
               }
+              deletedOrphanCount++;
+            } else {
+              console.warn(`Sidecar Plugin: Unable to delete ${file.path} - not a valid file reference.`);
             }
           } catch (error) {
-            console.error(`Sidecar Plugin: Error deleting sidecar ${file.path} (Reason: ${reason}) during revalidation: `, error);
+            console.error(`Sidecar Plugin: Error deleting sidecar ${file.path} during revalidation: `, error);
           }
         }
       }
     }
-    const noticeFragment = document.createDocumentFragment();
-    noticeFragment.appendChild(createEl('div', { text: 'Sidecar revalidation complete.'}));
 
-    const statsDiv = noticeFragment.appendChild(createEl('div'));
+    // Final log summary
+    console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}, Deleted non-monitored sources: ${deletedNonMonitoredSourceCount}`);
 
-    const totalDiv = createEl('div');
-    totalDiv.appendText('Total monitored: ');
-    const boldNum = createEl('span', { cls: 'sidecar-notice-value', text: String(countMonitoredFilesWithSidecars) });
-    totalDiv.appendChild(boldNum);
-    statsDiv.appendChild(totalDiv);
-
-    if (newlyCreatedSidecarCount > 0) {
-      const createdDiv = createEl('div', { cls: 'sidecar-notice-green' });
-      createdDiv.appendText('Newly created: ');
-      const boldNum = createEl('span', { cls: 'sidecar-notice-value', text: String(newlyCreatedSidecarCount) });
-      createdDiv.appendChild(boldNum);
-      statsDiv.appendChild(createdDiv);
-    }
-    if (deletedOrphanCount > 0) {
-      const deletedDiv = createEl('div', { cls: 'sidecar-notice-red' });
-      deletedDiv.appendText('Deleted (orphaned/malformed): ');
-      const boldNum = createEl('span', { cls: 'sidecar-notice-value', text: String(deletedOrphanCount) });
-      deletedDiv.appendChild(boldNum);
-      statsDiv.appendChild(deletedDiv);
-    }
-    if (deletedNonMonitoredSourceCount > 0) {
-      const deletedDiv = createEl('div', { cls: 'sidecar-notice-red' });
-      deletedDiv.appendText('Deleted (non-monitored source): ');
-      const boldNum = createEl('span', { cls: 'sidecar-notice-value', text: String(deletedNonMonitoredSourceCount) });
-      deletedDiv.appendChild(boldNum);
-      statsDiv.appendChild(deletedDiv);
-    }
-    new Notice(noticeFragment, 10000);
+    new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
   }
 
   isMonitoredFile(filePath: string): boolean {
-    // Use the imported utility function from utils.ts which includes extension checking
     return isMonitoredFile(filePath, this.settings, (fp) => this.isSidecarFile(fp));
   }
 
   getSidecarPath(filePath: string): string {
-    return filePath + this.settings.sidecarSuffix;
+    return getSidecarPath(filePath, this.settings);
   }
 
   isSidecarFile(filePath: string): boolean {
-    return filePath.endsWith(this.settings.sidecarSuffix);
+    return isSidecarFile(filePath, this.settings);
   }
 
   getSourcePathFromSidecar(sidecarPath: string): string | null {
-    if (!this.isSidecarFile(sidecarPath)) {
-      return null;
-    }
-    return sidecarPath.slice(0, -this.settings.sidecarSuffix.length);
+    return getSourcePathFromSidecar(sidecarPath, this.settings);
   }
 }
