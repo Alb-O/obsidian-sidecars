@@ -7,10 +7,12 @@ import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 export default class SidecarPlugin extends Plugin {
   settings: SidecarPluginSettings;
   public isInitialRevalidating = false; // Flag to manage initial revalidation state
+  public hasFinishedInitialLoad = false; // True after initial vault load
 
   async onload() {
     await this.loadSettings();
     this.isInitialRevalidating = this.settings.revalidateOnStartup;
+    this.hasFinishedInitialLoad = false;
 
     this.addSettingTab(new SidecarSettingTab(this.app, this));
 
@@ -23,17 +25,24 @@ export default class SidecarPlugin extends Plugin {
     this.registerDirectEventHandlers();
     this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
 
+    // Only set up initial revalidation if the setting is enabled
     if (this.settings.revalidateOnStartup) {
       this.app.workspace.onLayoutReady(async () => {
-        this.isInitialRevalidating = true; 
+        this.isInitialRevalidating = true;
         try {
           await this.revalidateSidecars();
         } catch (error) {
           console.error(`Sidecar Plugin: Error during initial revalidation:`, error);
         } finally {
           this.isInitialRevalidating = false;
+          this.hasFinishedInitialLoad = true;
         }
       });
+    } else {
+      this.app.workspace.onLayoutReady(() => {
+        this.hasFinishedInitialLoad = true;
+      });
+      this.isInitialRevalidating = false;
     }
 
     this.addCommand({

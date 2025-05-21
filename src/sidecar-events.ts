@@ -5,6 +5,10 @@ import type SidecarPlugin from './main';
 const recentlyRestoredSidecars = new Set<string>();
 
 export async function handleFileCreate(plugin: SidecarPlugin, file: TAbstractFile): Promise<void> {
+  // Prevent sidecar creation for files present at startup if revalidateOnStartup is false
+  if (!plugin.hasFinishedInitialLoad && !plugin.settings.revalidateOnStartup) {
+    return;
+  }
   if (plugin.isInitialRevalidating) {
     return;
   }
