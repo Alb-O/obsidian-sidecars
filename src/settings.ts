@@ -8,6 +8,9 @@ export interface SidecarPluginSettings {
   blacklistFolders?: string[];
   whitelistFolders?: string[];
   hideSidecarsInExplorer?: boolean;
+  useRegexForFolderLists?: boolean;
+  dimSidecarsInExplorer?: boolean;
+  prependSidecarIndicator?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -16,6 +19,9 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
   blacklistFolders: [],
   whitelistFolders: [],
   hideSidecarsInExplorer: false,
+  useRegexForFolderLists: false,
+  dimSidecarsInExplorer: false,
+  prependSidecarIndicator: false,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -31,7 +37,7 @@ export class SidecarSettingTab extends PluginSettingTab {
         containerEl.empty();
         
         new Setting(containerEl)
-            .setName('Sidecar File Suffix')
+            .setName('Sidecar file suffix')
             .setDesc('The suffix to use for sidecar files (e.g., .side.md). Reload the plugin or restart Obsidian after changing this.')
             .addText(text => text
                 .setPlaceholder('.side.md')
@@ -46,29 +52,22 @@ export class SidecarSettingTab extends PluginSettingTab {
                     }
                 }));
 
-        // Toggle for hiding sidecar files in the file explorer
         new Setting(containerEl)
-            .setName('Hide sidecar files in File Explorer')
-            .setDesc('Visually hide sidecar files in Obsidian\'s File Explorer.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.hideSidecarsInExplorer ?? false)
-                .onChange(async (value) => {
-                    this.plugin.settings.hideSidecarsInExplorer = value;
-                    await this.plugin.saveSettings();
-                    // Dynamically add/remove the CSS
-                    if (value) {
-                        document.body.classList.add('sidecar-hide-files');
-                    } else {
-                        document.body.classList.remove('sidecar-hide-files');
-                    }
-                })
-            );
+            .setName('Revalidate sidecars')
+            .setDesc('Manually re-scan all files to create missing sidecars and remove orphaned or invalid ones. This can be useful after bulk file operations or if you suspect inconsistencies.')
+            .addButton(button => button
+                .setButtonText('Revalidate Now')
+                .setCta()
+                .onClick(() => {
+                    new Notice('Starting sidecar revalidation...');
+                    this.plugin.revalidateSidecars();
+                }));
 
         new Setting(containerEl).setName('File types').setHeading()
 
         new Setting(containerEl)
             .setName('Manage image files')
-            .setDesc('Append supported image file extensions to the list of file types to be monitored and managed:')
+            .setDesc('Include images in the list of file types to be monitored and managed:')
             .then(setting => {
                 const desc = setting.descEl;
                 const ex = document.createElement('div');
@@ -101,7 +100,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Manage video files')
-            .setDesc('Append supported video file extensions to the list of file types to be monitored and managed:')
+            .setDesc('Include videos in the list of file types to be monitored and managed:')
             .then(setting => {
                 const desc = setting.descEl;
                 const ex = document.createElement('div');
@@ -134,7 +133,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Manage audio files')
-            .setDesc('Append supported audio file extensions to the list of file types to be monitored and managed:')
+            .setDesc('Include audio files in the list of file types to be monitored and managed:')
             .then(setting => {
                 const desc = setting.descEl;
                 const ex = document.createElement('div');
@@ -180,6 +179,46 @@ export class SidecarSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+        
+        new Setting(containerEl).setName('Display').setHeading()
+
+        const hideToggleComponent: Setting = new Setting(containerEl)
+            .setName('Hide sidecar files in File Explorer')
+            .setDesc("Completely hide sidecar files in Obsidian's File Explorer.")
+            .addToggle(toggle => {
+                toggle.setValue(this.plugin.settings.hideSidecarsInExplorer ?? false)
+                    .onChange(async (value) => {
+                        this.plugin.settings.hideSidecarsInExplorer = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        const dimToggleComponent: Setting = new Setting(containerEl)
+            .setName('Dim sidecar files in File Explorer')
+            .setDesc('Visually dim sidecar files in the File Explorer.')
+            .addToggle(toggle => {
+                toggle.setValue(this.plugin.settings.dimSidecarsInExplorer ?? false)
+                    .onChange(async (value) => {
+                        this.plugin.settings.dimSidecarsInExplorer = value;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('Arrow indicators')
+            .setDesc((() => {
+                const frag = document.createDocumentFragment();
+                frag.append('Prepend ');
+                frag.appendChild(document.createElement('code')).textContent = '⮡';
+                frag.append(' to sidecar file names (visual only) and adjust padding to indicate the sidecar is a child of the main file.');
+                return frag;
+            })())
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.prependSidecarIndicator ?? false)
+                .onChange(async (value) => {
+                    this.plugin.settings.prependSidecarIndicator = value;
+                    await this.plugin.saveSettings();
+                }));
 
         new Setting(containerEl)
             .setName('Management scope')
@@ -188,63 +227,9 @@ export class SidecarSettingTab extends PluginSettingTab {
                 const fragment = document.createDocumentFragment();
                 fragment.createSpan({ text: "Configure which folders are included or excluded from sidecar management. You can use vault-absolute paths (e.g. " });
                 fragment.appendChild(document.createElement("code")).textContent = "/Templates/";
-                fragment.appendChild(document.createTextNode(") or wildcards."));
-                fragment.appendChild(document.createElement("br"));
-
-                const details = document.createElement("details");
-                details.style.marginTop = "0.5em";
-                const summary = document.createElement("summary");
-                summary.textContent = "Click for wildcard pattern examples and explanation";
-                details.appendChild(summary);
-                details.appendChild(document.createElement("br"));
-
-                // * wildcard
-                const codeStar = document.createElement("code");
-                codeStar.textContent = "*";
-                details.appendChild(codeStar);
-                details.appendChild(document.createTextNode(" (one asterisk) matches any sequence of characters except the path separator '/' (not recursive)."));
-                const ex1ul = document.createElement("ul");
-                const ex1li1 = document.createElement("li");
-                ex1li1.appendChild(document.createTextNode("Example: "));
-                ex1li1.appendChild(document.createElement("code")).textContent = "*/Templates/*";
-                ex1li1.appendChild(document.createTextNode(" manages files directly inside any folder named 'Templates' that is itself directly inside another folder. For example, matches files in "));
-                ex1li1.appendChild(document.createElement("code")).textContent = "Folder1/Templates/";
-                ex1li1.appendChild(document.createTextNode(" or "));
-                ex1li1.appendChild(document.createElement("code")).textContent = "Folder2/Templates/";
-                ex1li1.appendChild(document.createTextNode(", but not files in "));
-                ex1li1.appendChild(document.createElement("code")).textContent = "Templates/";
-                ex1li1.appendChild(document.createTextNode(" or "));
-                ex1li1.appendChild(document.createElement("code")).textContent = "Deep/Nested/Templates/";
-                ex1li1.appendChild(document.createTextNode(" or their subfolders."));
-                ex1ul.appendChild(ex1li1);
-                details.appendChild(ex1ul);
-                details.appendChild(document.createElement("br"));
-
-                // ** wildcard
-                const codeStarStar = document.createElement("code");
-                codeStarStar.textContent = "**";
-                details.appendChild(codeStarStar);
-                details.appendChild(document.createTextNode(" (two asterisks) matches any sequence of characters, including '/' (recursive, matches subfolders)."));
-                const ex2ul = document.createElement("ul");
-                const ex2li1 = document.createElement("li");
-                ex2li1.appendChild(document.createTextNode("Example: "));
-                ex2li1.appendChild(document.createElement("code")).textContent = "**/Templates/*";
-                ex2li1.appendChild(document.createTextNode(" manages files directly inside any folder named 'Templates', regardless of where that folder is located in the vault hierarchy. Matches files in "));
-                ex2li1.appendChild(document.createElement("code")).textContent = "Templates/";
-                ex2li1.appendChild(document.createTextNode(", "));
-                ex2li1.appendChild(document.createElement("code")).textContent = "Folder/Templates/";
-                ex2li1.appendChild(document.createTextNode(", or "));
-                ex2li1.appendChild(document.createElement("code")).textContent = "Deep/Nested/Templates/";
-                ex2li1.appendChild(document.createTextNode(", but not in their subfolders."));
-                ex2ul.appendChild(ex2li1);
-                const ex2li2 = document.createElement("li");
-                ex2li2.appendChild(document.createTextNode("Example: "));
-                ex2li2.appendChild(document.createElement("code")).textContent = "**/Templates/**";
-                ex2li2.appendChild(document.createTextNode(" manages files inside any folder named 'Templates' AND all files in all of its subfolders, regardless of where the 'Templates' folder is located in the vault hierarchy. This is fully recursive."));
-                ex2ul.appendChild(ex2li2);
-                details.appendChild(ex2ul);
-
-                fragment.appendChild(details);
+                fragment.appendChild(document.createTextNode(") or asterisk ("));
+                fragment.appendChild(document.createElement("code")).textContent = "*";
+                fragment.appendChild(document.createTextNode(") wildcards. For more advanced control, an option to use full regex syntax is provided at the bottom."));
                 return fragment;
             })());
 
@@ -275,5 +260,25 @@ export class SidecarSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     });
             });
+
+        new Setting(containerEl)
+            .setName('Use regular expressions for folder lists')
+            .setDesc((() => {
+                const frag = document.createDocumentFragment();
+                frag.append('If enabled, folder patterns are treated as full regular expressions. If disabled, only ');
+                frag.appendChild(document.createElement('code')).textContent = '*';
+                frag.append(' is supported as a wildcard for any depth (e.g. ');
+                frag.appendChild(document.createElement('code')).textContent = '*/Media/*';
+                frag.append(' matches any Media folder at any depth).');
+                return frag;
+            })())
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.useRegexForFolderLists ?? false)
+                .onChange(async (value) => {
+                    this.plugin.settings.useRegexForFolderLists = value;
+                    await this.plugin.saveSettings();
+                })
+            );
+
     }
 }

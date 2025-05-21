@@ -9,3 +9,38 @@
   resize: none;
   min-width: 164.8px; 
 }
+
+/*
+  Sidecar Plugin - File Explorer Visibility Styles
+  -------------------------------------------------
+  These rules define the intended appearance for hidden and dimmed sidecar files
+  in the Obsidian File Explorer.
+
+  Due to the dynamic nature of the sidecar file suffix (configurable by the user),
+  the actual CSS rules that target these files (e.g., .nav-file-title[data-path$='.custom.side.md'])
+  are generated and injected by the plugin's JavaScript (main.ts).
+
+  This section serves as the canonical definition of the styles themselves.
+*/
+
+ /* 
+  Style definition for HIDDEN sidecar files 
+  Applied by main.ts as: 
+  .nav-file-title[data-path$='{dynamicSuffix}'] { 
+    display: none !important; 
+  } 
+*/
+.example-sidecar-hidden-definition { /* This class is for definition/documentation purposes */
+  display: none !important;
+}
+
+/* 
+  Style definition for DIMMED sidecar files 
+  Applied by main.ts as: 
+  .nav-file-title[data-path$='{dynamicSuffix}'] { 
+    color: var(--text-muted) !important; 
+  } 
+*/
+.example-sidecar-dimmed-definition { /* This class is for definition/documentation purposes */
+  color: var(--text-muted) !important;
+}

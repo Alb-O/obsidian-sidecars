@@ -15,46 +15,36 @@ export function getExtension(filePath: string): string {
  * - / at the start means vault root
  * - All patterns are matched against normalized forward-slash paths
  */
-export function userPatternToRegex(pattern: string): string {
+export function userPatternToRegex(pattern: string, useRegex: boolean): string {
   const orig = pattern.trim();
   if (!orig) return '';
-  // Special case: recursive any-depth match for folder name (e.g., **/Media/**)
-  if (orig.startsWith('**/') && orig.endsWith('/**')) {
-    const mid = orig.slice(3, -3).replace(/([.+?^${}()|[\\]\/])/g, '\\$1');
-    return `(?:.*/)?${mid}(?:/.*)?`;
+  if (useRegex) {
+    // Treat as full regex, use as-is
+    return orig;
   }
-  // Special case: one-level parent for folder (e.g., */Media/**)
-  if (orig.startsWith('*/') && orig.endsWith('/**')) {
-    const mid = orig.slice(2, -3).replace(/([.+?^${}()|[\\]\/])/g, '\\$1');
-    return `[^/]+/${mid}(?:/.*)?`;
-  }
-  let pat = orig;
+  // Only * is supported as a wildcard for any depth, / for root
   // Escape regex special chars except * and /
-  pat = pat.replace(/([.+?^${}()|[\\]\\])/g, '\\$1');
-  // Replace ** with .*
-  pat = pat.replace(/\*\*/g, '.*');
-  // Replace * with [^/]*
-  pat = pat.replace(/\*/g, '[^/]*');
+  let pat = orig.replace(/([.+?^${}()|[\\]\\])/g, '\\$1');
+  // Replace * with .*
+  pat = pat.replace(/\*/g, '.*');
   // If starts with /, anchor to start
   if (pat.startsWith('/')) pat = '^' + pat.slice(1);
-  // Otherwise, match anywhere in the path
   else pat = '.*' + pat;
   // If ends with /, match anything after (subfolders/files)
   if (pat.endsWith('/')) pat = pat + '.*';
   // If pattern does not start with vault-root '/', allow matching at string start as well as after '/'
-  if (!pattern.trim().startsWith('/')) {
+  if (!orig.startsWith('/')) {
     pat = pat.replace(/\//g, '(?:/|^)');
   }
-  // Always use forward slashes and return
   return pat;
 }
 
-export function isPathInFolderList(filePath: string, folderList: string[] | undefined): boolean {
+export function isPathInFolderList(filePath: string, folderList: string[] | undefined, useRegex: boolean = false): boolean {
   if (!folderList || folderList.length === 0) return false;
   // Normalize path to always use forward slashes
   const normalized = filePath.replace(/\\/g, '/');
   return folderList.some(pattern => {
-    const regexStr = userPatternToRegex(pattern);
+    const regexStr = userPatternToRegex(pattern, useRegex);
     if (!regexStr) return false;
     try {
       return new RegExp(regexStr).test(normalized);
@@ -67,11 +57,11 @@ export function isPathInFolderList(filePath: string, folderList: string[] | unde
 export function isFileAllowedByFolderLists(filePath: string, settings: SidecarPluginSettings): boolean {
   // If whitelist is set, only allow if the file is inside (or matches) a whitelisted folder
   if (settings.whitelistFolders && settings.whitelistFolders.length > 0) {
-    if (!isPathInFolderList(filePath, settings.whitelistFolders)) return false;
+    if (!isPathInFolderList(filePath, settings.whitelistFolders, settings.useRegexForFolderLists)) return false;
   }
   // If blacklist is set, disallow if matches blacklist (even if inside a whitelisted folder)
   if (settings.blacklistFolders && settings.blacklistFolders.length > 0) {
-    if (isPathInFolderList(filePath, settings.blacklistFolders)) return false;
+    if (isPathInFolderList(filePath, settings.blacklistFolders, settings.useRegexForFolderLists)) return false;
   }
   return true;
 }

@@ -1,14 +1,8 @@
 import { Notice, Plugin, TFile } from 'obsidian';
-import { registerRenameDeleteHandlers, EmptyAttachmentFolderBehavior, type RenameDeleteHandlerSettings } from 'obsidian-dev-utils/obsidian/RenameDeleteHandler';
 import { SidecarSettingTab } from './settings';
 import { handleFileCreate, handleFileDelete, handleFileRename } from './sidecar-events';
 import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSidecar, isFileAllowedByFolderLists } from './utils';
-import type { SidecarPluginSettings } from './settings';
-
-const DEFAULT_SETTINGS: SidecarPluginSettings = {
-  monitoredExtensions: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'pdf', 'mp3', 'mp4', 'mov', 'wav', 'webm'],
-  sidecarSuffix: '.side.md'
-};
+import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 
 export default class SidecarPlugin extends Plugin {
   settings: SidecarPluginSettings;
@@ -38,17 +32,57 @@ export default class SidecarPlugin extends Plugin {
   }
 
   updateSidecarHideCss() {
-    const id = 'sidecar-hide-files-style';
-    let style = document.getElementById(id);
+    const id = 'sidecar-visibility-style';
+    let styleElement = document.getElementById(id) as HTMLStyleElement | null;
+
+    let styleTextContent = '';
+
     if (this.settings.hideSidecarsInExplorer) {
-      if (!style) {
-        style = document.createElement('style');
-        style.id = id;
-        style.textContent = `.nav-file-title[data-path$='${this.settings.sidecarSuffix}'] { display: none !important; }`;
-        document.head.appendChild(style);
+      styleTextContent += `
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
+          display: none !important;
+        }
+      `;
+    } else if (this.settings.dimSidecarsInExplorer) {
+      styleTextContent += `
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
+          color: var(--text-faint) !important;
+        }
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}']:hover,
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'].is-active {
+          color: var(--text-muted) !important;
+        }
+      `;
+    }
+
+    if (this.settings.prependSidecarIndicator) {
+      styleTextContent += `
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}']::before {
+          content: "⮡";
+          padding-left: 0.2em;
+          padding-right: 0.75em;
+        }
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] .tree-item-inner {
+          vertical-align: text-top;
+        }
+        .nav-file-title[data-path$='${this.settings.sidecarSuffix}'] {
+          padding-top: 0px !important;
+          padding-bottom: calc(2 * var(--size-4-1)) !important;
+        }
+      `;
+    }
+
+    if (styleTextContent) {
+      if (!styleElement) {
+        styleElement = document.createElement('style');
+        styleElement.id = id;
+        document.head.appendChild(styleElement);
       }
+      styleElement.textContent = styleTextContent;
     } else {
-      if (style) style.remove();
+      if (styleElement) {
+        styleElement.remove();
+      }
     }
   }
 
