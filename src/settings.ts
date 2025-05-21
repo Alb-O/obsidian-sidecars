@@ -11,6 +11,7 @@ export interface SidecarPluginSettings {
   useRegexForFolderLists?: boolean;
   dimSidecarsInExplorer?: boolean;
   prependSidecarIndicator?: boolean;
+  revalidateOnStartup: boolean; // Changed to non-optional
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
   useRegexForFolderLists: false,
   dimSidecarsInExplorer: false,
   prependSidecarIndicator: false,
+  revalidateOnStartup: true,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -50,6 +52,16 @@ export class SidecarSettingTab extends PluginSettingTab {
                         new Notice("Sidecar suffix must start with a dot '.' and not be empty.");
                         text.setValue(this.plugin.settings.sidecarSuffix);
                     }
+                }));
+
+        new Setting(containerEl)
+            .setName('Revalidate sidecars on startup')
+            .setDesc('Automatically re-scan all files and manage sidecars when Obsidian starts or the plugin is loaded.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.revalidateOnStartup) // Removed nullish coalescing as it's no longer optional
+                .onChange(async (value) => {
+                    this.plugin.settings.revalidateOnStartup = value;
+                    await this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
