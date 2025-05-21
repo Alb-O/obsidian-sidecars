@@ -1,133 +1,246 @@
-import type SidecarPlugin from './main';
+import type SidecarPlugin from "./main";
 
 export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
-  if (plugin.sidecarAppearanceObserver) {
-    plugin.sidecarAppearanceObserver.disconnect();
-    plugin.sidecarAppearanceObserver = undefined;
-  }
+	if (plugin.sidecarAppearanceObserver) {
+		plugin.sidecarAppearanceObserver.disconnect();
+		plugin.sidecarAppearanceObserver = undefined;
+	}
 
-  const processNavItem = (el: HTMLElement) => {
-    const dataPath = el.getAttribute('data-path');
-    if (!dataPath) return;
+	// Add debounce timeout variable
+	let styleUpdateTimeout: NodeJS.Timeout | null = null;
 
-    const isSidecar = dataPath.endsWith(plugin.settings.sidecarSuffix);
-    const existingTag = el.querySelector('.nav-file-tag.sidecar-tag');
-    const innerContentEl = el.querySelector('.tree-item-inner');
+	const processNavItem = (el: HTMLElement) => {
+		const dataPath = el.getAttribute("data-path");
+		if (!dataPath) return;
 
-    if (isSidecar) {
-      // 1. Set draggable attribute based on settings
-      if (plugin.settings.preventDraggingSidecars) {
-        el.setAttribute('draggable', 'false');
-      } else {
-        el.removeAttribute('draggable');
-      }
+		const fullSidecarExtension =
+			"." + plugin.settings.sidecarSuffix + ".md";
+		const isSidecar = dataPath.endsWith(fullSidecarExtension);
+		const innerContentEl = el.querySelector(".tree-item-inner");
 
-      // 2. Modify display name and add/update tag
-      if (innerContentEl) {
-        const sourceFilePath = dataPath.slice(0, -plugin.settings.sidecarSuffix.length);
-        const sourceFileNameWithOriginalExt = sourceFilePath.substring(sourceFilePath.lastIndexOf('/') + 1);
-        if (innerContentEl.textContent !== sourceFileNameWithOriginalExt) {
-          innerContentEl.textContent = sourceFileNameWithOriginalExt;
-        }
-      }
+		// Remove any existing extension tags inside nav-file-title
+		Array.from(el.querySelectorAll('.main-ext-tag, .sidecar-tag')).forEach((tag) => tag.remove());
 
-      // Calculate expected tag text
-      let tempTagText = plugin.settings.sidecarSuffix;
-      if (tempTagText.endsWith('.md')) tempTagText = tempTagText.slice(0, -3);
-      if (tempTagText.startsWith('.')) tempTagText = tempTagText.slice(1);
-      const expectedTagText = tempTagText;
+		if (isSidecar) {
+			// 1. Set draggable attribute based on settings
+			if (plugin.settings.preventDraggingSidecars) {
+				el.setAttribute("draggable", "false");
+			} else {
+				el.removeAttribute("draggable");
+			} // 2. Modify display name and add/update tags
+			if (innerContentEl) {
+				// Always clear existing content to ensure proper re-rendering
+				innerContentEl.textContent = "";
 
-      if (existingTag) {
-        if (existingTag.textContent !== expectedTagText) {
-          existingTag.textContent = expectedTagText;
-        }
-        if (plugin.settings.dimSidecarsInExplorer) {
-          existingTag.classList.add('dimmed');
-        } else {
-          existingTag.classList.remove('dimmed');
-        }
-      } else {
-        const newTag = document.createElement('div');
-        newTag.className = 'nav-file-tag sidecar-tag' + (plugin.settings.dimSidecarsInExplorer ? ' dimmed' : '');
-        newTag.textContent = expectedTagText;
-        el.appendChild(newTag);
-      }
-    } else {
-      if (existingTag) existingTag.remove();
-      if (el.getAttribute('draggable') === 'false') el.removeAttribute('draggable');
-    }
-  };
+				// Build display: add baseName only (no tags inside)
+				const sourceFilePath = dataPath.slice(
+					0,
+					-fullSidecarExtension.length
+				);
+				const sourceFileName = sourceFilePath.substring(
+					sourceFilePath.lastIndexOf("/") + 1
+				);
+				const dotIndex = sourceFileName.lastIndexOf(".");
+				const baseName =
+					dotIndex !== -1
+						? sourceFileName.slice(0, dotIndex)
+						: sourceFileName;
 
-  plugin.sidecarAppearanceObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type === 'childList') {
-        mutation.addedNodes.forEach((node) => {
-          if (node instanceof HTMLElement && node.classList.contains('nav-file-title')) {
-            processNavItem(node);
-          }
-        });
-      }
-    });
-  });
+				// Append base name as text
+				innerContentEl.appendChild(document.createTextNode(baseName));
+			}
 
-  const navContainer = document.querySelector('.nav-files-container, .workspace-leaf-content .nav-files-container');
-  if (navContainer) {
-    plugin.sidecarAppearanceObserver.observe(navContainer, { childList: true, subtree: true });
-  }
+			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
+			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
+				const sourceFilePath = dataPath.slice(0, -fullSidecarExtension.length);
+				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+				const dotIndex = sourceFileName.lastIndexOf(".");
+				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
+				if (mainExt) {
+					const mainExtTag = document.createElement("div");
+					mainExtTag.className = "nav-file-tag main-ext-tag";
+					mainExtTag.textContent = mainExt.toUpperCase();
+					el.appendChild(mainExtTag);
+				}
+			}
 
-  document.querySelectorAll('.nav-file-title').forEach((el) => {
-    if (el instanceof HTMLElement) processNavItem(el);
-  });
+			// Append sidecar suffix tag as child
+			const sidecarTagEl = document.createElement("div");
+			let classList = "nav-file-tag sidecar-tag";
+			if (plugin.settings.dimSidecarsInExplorer)
+				classList += " dimmed";
+			if (plugin.settings.colorSidecarExtension === false)
+				classList += " no-color";
+			sidecarTagEl.className = classList;
+			sidecarTagEl.textContent = plugin.settings.sidecarSuffix + (plugin.settings.showMdInSidecarTag ? ".md" : "");
+			el.appendChild(sidecarTagEl);
+
+			// Reset draggable status if we set it
+			if (el.getAttribute("draggable") === "false") {
+				el.removeAttribute("draggable");
+			}
+		}
+	};
+	plugin.sidecarAppearanceObserver = new MutationObserver((mutations) => {
+		// Flag to track if we need to process attribute changes
+		let shouldProcessAttributes = false;
+		let dataPathChanged = false;
+		let isDragging = false;
+
+		// Track added nodes directly
+		const affectedNodes: Set<HTMLElement> = new Set();
+
+		// First check if we're in a drag operation to avoid unnecessary processing
+		isDragging = document.querySelector(".is-being-dragged-over") !== null;
+
+		mutations.forEach((mutation) => {
+			if (mutation.type === "childList") {
+				mutation.addedNodes.forEach((node) => {
+					if (
+						node instanceof HTMLElement &&
+						node.classList.contains("nav-file-title")
+					) {
+						affectedNodes.add(node);
+						shouldProcessAttributes = true;
+					}
+				});
+			} else if (mutation.type === "attributes" && !isDragging) {
+				// Skip attribute processing entirely during drag operations
+				if (mutation.target instanceof HTMLElement) {
+					// Check for drag operation related classes
+					if (
+						mutation.target.classList.contains(
+							"is-being-dragged-over"
+						) ||
+						(mutation.oldValue &&
+							mutation.oldValue.includes("is-being-dragged-over"))
+					) {
+						return; // Skip this specific mutation
+					}
+
+					// Track if data-path changed (file moved)
+					if (mutation.attributeName === "data-path") {
+						dataPathChanged = true;
+						shouldProcessAttributes = true;
+						if (
+							mutation.target.classList.contains("nav-file-title")
+						) {
+							affectedNodes.add(mutation.target);
+						}
+					}
+
+					// Track class changes for folder expansion/collapse
+					if (
+						mutation.attributeName === "class" &&
+						(mutation.target.classList.contains("is-collapsed") ||
+							(mutation.oldValue &&
+								mutation.oldValue.includes("is-collapsed")))
+					) {
+						shouldProcessAttributes = true;
+					}
+				}
+			}
+		});
+
+		// Only schedule the update if needed and not during drag operations
+		if (shouldProcessAttributes && !isDragging) {
+			if (styleUpdateTimeout) {
+				clearTimeout(styleUpdateTimeout);
+			}
+
+			// Use a brief timeout (30ms) to debounce multiple rapid mutations
+			styleUpdateTimeout = setTimeout(() => {
+				// First, process any directly affected nodes
+				if (affectedNodes.size > 0) {
+					affectedNodes.forEach((node) => processNavItem(node));
+				}
+
+				// If we had data-path changes or folder structure changes, refresh all sidecars
+				// This ensures that moved files are properly styled
+				if (dataPathChanged) {
+					document
+						.querySelectorAll(
+							'.nav-file-title[data-path$=".' +
+								plugin.settings.sidecarSuffix +
+								'.md"]'
+						)
+						.forEach((el) => {
+							if (el instanceof HTMLElement) processNavItem(el);
+						});
+				}
+				styleUpdateTimeout = null;
+			}, 20);
+		}
+	});
+	const navContainer = document.querySelector(
+		".nav-files-container, .workspace-leaf-content .nav-files-container"
+	);
+	if (navContainer) {
+		plugin.sidecarAppearanceObserver.observe(navContainer, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeOldValue: true,
+			attributeFilter: ["class", "data-path"], // Track both class and data-path changes
+		});
+
+		// Ensure initial styling is applied to all existing sidecar files
+		document.querySelectorAll(".nav-file-title").forEach((el) => {
+			if (el instanceof HTMLElement) processNavItem(el);
+		});
+	}
 }
 
 export function updateSidecarHideCss(plugin: SidecarPlugin) {
-  const id = 'sidecar-visibility-style';
-  let styleElement = document.getElementById(id) as HTMLStyleElement | null;
-  let styleTextContent = '';
+	const id = "sidecar-visibility-style";
+	let styleElement = document.getElementById(id) as HTMLStyleElement | null;
+	let styleTextContent = "";
 
-  if (plugin.settings.hideSidecarsInExplorer) {
-    styleTextContent += `
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}'] {
+	const fullSidecarExtension = "." + plugin.settings.sidecarSuffix + ".md";
+
+	if (plugin.settings.hideSidecarsInExplorer) {
+		styleTextContent += `
+      .nav-file-title[data-path$='${fullSidecarExtension}'] {
         display: none !important;
       }
     `;
-  } else if (plugin.settings.dimSidecarsInExplorer) {
-    styleTextContent += `
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}'] {
+	} else if (plugin.settings.dimSidecarsInExplorer) {
+		styleTextContent += `
+      .nav-file-title[data-path$='${fullSidecarExtension}'] {
         color: var(--text-faint) !important;
       }
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}']:hover,
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}'].is-active {
+      .nav-file-title[data-path$='${fullSidecarExtension}']:hover,
+      .nav-file-title[data-path$='${fullSidecarExtension}'].is-active {
         color: var(--text-muted) !important;
       }
     `;
-  }
+	}
 
-  if (plugin.settings.prependSidecarIndicator) {
-    styleTextContent += `
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}']::before {
+	if (plugin.settings.prependSidecarIndicator) {
+		styleTextContent += `
+      .nav-file-title[data-path$='${fullSidecarExtension}']::before {
         content: "⮡";
         padding-left: 0.2em;
         padding-right: 0.75em;
       }
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}'] .tree-item-inner {
+      .nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-inner {
         vertical-align: text-top;
       }
-      .nav-file-title[data-path$='${plugin.settings.sidecarSuffix}'] {
+      .nav-file-title[data-path$='${fullSidecarExtension}'] {
         padding-top: 0px !important;
         padding-bottom: calc(2 * var(--size-4-1)) !important;
       }
     `;
-  }
+	}
 
-  if (styleTextContent) {
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.id = id;
-      document.head.appendChild(styleElement);
-    }
-    styleElement.textContent = styleTextContent;
-  } else {
-    if (styleElement) styleElement.remove();
-  }
+	if (styleTextContent) {
+		if (!styleElement) {
+			styleElement = document.createElement("style");
+			styleElement.id = id;
+			document.head.appendChild(styleElement);
+		}
+		styleElement.textContent = styleTextContent;
+	} else {
+		if (styleElement) styleElement.remove();
+	}
 }

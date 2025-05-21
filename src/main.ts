@@ -36,10 +36,9 @@ export default class SidecarPlugin extends Plugin {
     this.app.workspace.onLayoutReady(async () => {
       // Delay DOM manipulations to give Obsidian's UI more time to fully render after a full app reload
       setTimeout(() => {
-        // console.log("Sidecar Plugin: Attempting to update CSS and file appearance after delay.");
         this.updateSidecarHideCss();
         this.updateSidecarFileAppearance(); 
-      }, 50); // 50ms delay, can be adjusted if needed
+      }, 200); // Increased delay to 200ms for more reliable tag rendering
 
       if (this.settings.revalidateOnStartup) {
         this.isInitialRevalidating = true;
@@ -57,7 +56,6 @@ export default class SidecarPlugin extends Plugin {
         // (it's already called above, but good to be explicit if logic changes)
       }
     });
-    // Removed updateSidecarHideCss() and updateSidecarFileAppearance() from here
 
     this.addCommand({
       id: 'revalidate-sidecars',

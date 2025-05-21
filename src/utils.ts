@@ -70,18 +70,22 @@ export function isMonitoredFile(filePath: string, settings: SidecarPluginSetting
   if (isSidecarFile(filePath)) return false;
   if (!isFileAllowedByFolderLists(filePath, settings)) return false;
   const extension = getExtension(filePath);
-  return extension ? settings.monitoredExtensions.includes(extension) : false;
+  // Ensure monitoredExtensions are compared case-insensitively and without leading dots if user adds them.
+  return extension ? settings.monitoredExtensions.map(ext => ext.toLowerCase().replace(/^\./, '')).includes(extension) : false;
 }
 
 export function getSidecarPath(sourcePath: string, settings: SidecarPluginSettings): string {
-  return sourcePath + settings.sidecarSuffix;
+  return sourcePath + '.' + settings.sidecarSuffix + '.md';
 }
 
 export function isSidecarFile(filePath: string, settings: SidecarPluginSettings): boolean {
-  return filePath.endsWith(settings.sidecarSuffix);
+  return filePath.endsWith('.' + settings.sidecarSuffix + '.md');
 }
 
 export function getSourcePathFromSidecar(sidecarPath: string, settings: SidecarPluginSettings): string | null {
-  if (!isSidecarFile(sidecarPath, settings)) return null;
-  return sidecarPath.substring(0, sidecarPath.length - settings.sidecarSuffix.length);
+  const fullSuffix = '.' + settings.sidecarSuffix + '.md';
+  if (sidecarPath.endsWith(fullSuffix)) {
+    return sidecarPath.substring(0, sidecarPath.length - fullSuffix.length);
+  }
+  return null;
 }

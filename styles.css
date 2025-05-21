@@ -10,41 +10,6 @@
   min-width: 164.8px; 
 }
 
-/*
-  Sidecar Plugin - File Explorer Visibility Styles
-  -------------------------------------------------
-  These rules define the intended appearance for hidden and dimmed sidecar files
-  in the Obsidian File Explorer.
-
-  Due to the dynamic nature of the sidecar file suffix (configurable by the user),
-  the actual CSS rules that target these files (e.g., .nav-file-title[data-path$='.custom.side.md'])
-  are generated and injected by the plugin's JavaScript (main.ts).
-
-  This section serves as the canonical definition of the styles themselves.
-*/
-
- /* 
-  Style definition for HIDDEN sidecar files 
-  Applied by main.ts as: 
-  .nav-file-title[data-path$='{dynamicSuffix}'] { 
-    display: none !important; 
-  } 
-*/
-.example-sidecar-hidden-definition { /* This class is for definition/documentation purposes */
-  display: none !important;
-}
-
-/* 
-  Style definition for DIMMED sidecar files 
-  Applied by main.ts as: 
-  .nav-file-title[data-path$='{dynamicSuffix}'] { 
-    color: var(--text-muted) !important; 
-  } 
-*/
-.example-sidecar-dimmed-definition { /* This class is for definition/documentation purposes */
-  color: var(--text-muted) !important;
-}
-
 .sidecar-notice-green {
   color: var(--color-green, #4caf50);
 }
@@ -55,21 +20,43 @@
   font-weight: bold;
 }
 
-/* Prevent double .md tag for sidecars */
-.nav-file-title[data-path$='.side.md'] .nav-file-tag:not(.sidecar-tag) {
+/* Prevent double .md tag for sidecars: selectors for sidecar files are now generated dynamically in JS based on the sidecarSuffix setting. The following is an example for documentation only: */
+/*
+.nav-file-title[data-path$='.side.md'] .nav-file-tag:not(.sidecar-tag):not(.sidecar-mainext-tag) {
   display: none !important;
 }
+*/
 
 .nav-file-tag.sidecar-tag {
   color: var(--text-accent);
+  display: inline-block;
 }
 
-/* Only apply opacity if dimSidecarsInExplorer is enabled. The plugin should toggle this class on the element. */
+.nav-file-tag.sidecar-tag.no-color {
+  color: unset;
+}
+
+/* When a sidecar tag should be dimmed, make it more transparent */
 .nav-file-tag.sidecar-tag.dimmed {
-  opacity: var(--link-unresolved-opacity);
+  opacity: var(--link-unresolved-opacity); /* Use opacity for dimming */
 }
 
-.nav-file-title[data-path$='.side.md']:hover .nav-file-tag.sidecar-tag.dimmed,
-.nav-file-title[data-path$='.side.md'].is-active .nav-file-tag.sidecar-tag.dimmed {
+/* If a dimmed tag is also set to 'no-color', do not reduce its opacity */
+.nav-file-tag.sidecar-tag.dimmed.no-color {
+  opacity: 1; /* Override general dimming for no-color tags */
+}
+
+/* Restore opacity for dimmed tags when their parent item is hovered or active */
+.nav-file-title:hover .nav-file-tag.sidecar-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.sidecar-tag.dimmed {
   opacity: 1;
+}
+
+.sidecar-tag-example {
+  margin-left: 0 !important; /* Override existing margin */
+}
+
+.sidecar-explorer-style-settings > summary {
+  padding-bottom: 0.75em;
+  font-weight: var(--font-semibold);
 }

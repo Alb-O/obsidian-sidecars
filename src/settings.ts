@@ -11,13 +11,16 @@ export interface SidecarPluginSettings {
   useRegexForFolderLists?: boolean;
   dimSidecarsInExplorer?: boolean;
   prependSidecarIndicator?: boolean;
-  revalidateOnStartup: boolean; // Changed to non-optional
+  revalidateOnStartup: boolean;
   preventDraggingSidecars?: boolean;
+  colorSidecarExtension?: boolean;
+  hideMainExtensionInExplorer?: boolean;
+  showMdInSidecarTag?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
-  monitoredExtensions: [], // No monitored extensions by default
-  sidecarSuffix: '.side.md',
+  monitoredExtensions: [],
+  sidecarSuffix: 'side',
   blacklistFolders: [],
   whitelistFolders: [],
   hideSidecarsInExplorer: false,
@@ -26,6 +29,9 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
   prependSidecarIndicator: false,
   revalidateOnStartup: true,
   preventDraggingSidecars: true,
+  colorSidecarExtension: true,
+  hideMainExtensionInExplorer: false,
+  showMdInSidecarTag: false,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -42,19 +48,53 @@ export class SidecarSettingTab extends PluginSettingTab {
         
         new Setting(containerEl)
             .setName('Sidecar file suffix')
-            .setDesc('The suffix to use for sidecar files (e.g., .side.md). Reload the plugin or restart Obsidian after changing this.')
-            .addText(text => text
-                .setPlaceholder('.side.md')
-                .setValue(this.plugin.settings.sidecarSuffix)
-                .onChange(async (value) => {
-                    if (value.length > 0 && value.startsWith('.')) {
-                        this.plugin.settings.sidecarSuffix = value;
-                        await this.plugin.saveSettings();
+            .setDesc('The suffix to use for sidecar files (e.g., side). Do not include periods or the .md extension. Reload the plugin or restart Obsidian after changing this.')
+            .addText(text => {
+                text.setPlaceholder('side')
+                    .setValue(this.plugin.settings.sidecarSuffix);
+
+                const handleValidation = async () => {
+                    const currentValue = text.inputEl.value;
+                    if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md')) {
+                        // Only save if the value has actually changed from the last saved valid state
+                        if (this.plugin.settings.sidecarSuffix !== currentValue) {
+                            this.plugin.settings.sidecarSuffix = currentValue;
+                            await this.plugin.saveSettings();
+
+                            // Update example tags in settings UI
+                            const exampleTags = this.containerEl.querySelectorAll('.sidecar-tag-example');
+                            exampleTags.forEach(tag => {
+                                if (tag instanceof HTMLElement) {
+                                    tag.textContent = this.plugin.settings.sidecarSuffix;
+                                }
+                            });
+
+                            // Refresh explorer styles
+                            if (this.plugin.updateSidecarFileAppearance) {
+                                this.plugin.updateSidecarFileAppearance();
+                            }
+                            if (this.plugin.updateSidecarHideCss) {
+                                this.plugin.updateSidecarHideCss();
+                            }
+                        }
                     } else {
-                        new Notice("Sidecar suffix must start with a dot '.' and not be empty.");
-                        text.setValue(this.plugin.settings.sidecarSuffix);
+                        new Notice("Sidecar suffix must not be empty and cannot contain periods or 'md'.");
+                        // Revert the input field to the last saved (and valid) value
+                        text.setValue(this.plugin.settings.sidecarSuffix); 
                     }
-                }));
+                };
+
+                text.inputEl.addEventListener('blur', async () => {
+                    await handleValidation();
+                });
+
+                text.inputEl.addEventListener('keydown', async (event: KeyboardEvent) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault(); // Prevent default Enter behavior (e.g., form submission)
+                        await handleValidation();
+                    }
+                });
+            });
 
         new Setting(containerEl)
             .setName('Revalidate sidecars on startup')
@@ -194,10 +234,25 @@ export class SidecarSettingTab extends PluginSettingTab {
                     });
             });
         
-        new Setting(containerEl).setName('File Explorer').setHeading()
+        new Setting(containerEl).setName('File Explorer behavior').setHeading();
 
-        const hideToggleComponent: Setting = new Setting(containerEl)
-            .setName('Hide sidecar files in File Explorer')
+        // Prevent dragging (OUTSIDE details)
+        new Setting(containerEl)
+            .setName('Prevent dragging of sidecar files')
+            .setDesc('If enabled, sidecar files cannot be dragged in the File Explorer. This helps prevent accidental moves.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.preventDraggingSidecars ?? true)
+                .onChange(async (value) => {
+                    this.plugin.settings.preventDraggingSidecars = value;
+                    await this.plugin.saveSettings();
+                    if (this.plugin.updateSidecarFileAppearance) {
+                        this.plugin.updateSidecarFileAppearance();
+                    }
+                }));
+
+        // Hide sidecar files (OUTSIDE details)
+        new Setting(containerEl)
+            .setName('Hide sidecar files')
             .setDesc("Completely hide sidecar files in Obsidian's File Explorer.")
             .addToggle(toggle => {
                 toggle.setValue(this.plugin.settings.hideSidecarsInExplorer ?? false)
@@ -207,8 +262,18 @@ export class SidecarSettingTab extends PluginSettingTab {
                     });
             });
 
-        const dimToggleComponent: Setting = new Setting(containerEl)
-            .setName('Dim sidecar files in File Explorer')
+        // --- Start File Explorer Style Collapsible ---
+        const explorerStyleDetails = document.createElement('details');
+        explorerStyleDetails.open = false; // collapsed by default
+        explorerStyleDetails.className = 'sidecar-explorer-style-settings setting-item';
+        const summary = document.createElement('summary');
+        summary.textContent = 'File Explorer styles';
+        explorerStyleDetails.appendChild(summary);
+        containerEl.appendChild(explorerStyleDetails);
+
+        // Dim sidecar files (INSIDE details)
+        new Setting(explorerStyleDetails)
+            .setName('Dim sidecar files')
             .setDesc('Visually dim sidecar files in the File Explorer.')
             .addToggle(toggle => {
                 toggle.setValue(this.plugin.settings.dimSidecarsInExplorer ?? false)
@@ -218,7 +283,8 @@ export class SidecarSettingTab extends PluginSettingTab {
                     });
             });
 
-        new Setting(containerEl)
+        // Arrow indicators
+        new Setting(explorerStyleDetails)
             .setName('Arrow indicators')
             .setDesc((() => {
                 const frag = document.createDocumentFragment();
@@ -234,19 +300,64 @@ export class SidecarSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Prevent dragging of sidecar files in File Explorer')
-            .setDesc('If enabled, sidecar files cannot be dragged in the File Explorer. This helps prevent accidental moves.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.preventDraggingSidecars ?? true)
+        // Colored sidecar extension
+        new Setting(explorerStyleDetails)
+            .setName('Colored sidecar extension')
+            .setDesc((() => {
+                const frag = document.createDocumentFragment();
+                frag.append('Toggle coloring of the sidecar extension (e.g. ');
+                const codeTag = document.createElement('span');
+                codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example';
+                codeTag.textContent = this.plugin.settings.sidecarSuffix;
+                frag.appendChild(codeTag);
+                frag.append(') in the File Explorer.');
+                return frag;
+            })())
+            .addToggle((toggle) => toggle
+                .setValue(this.plugin.settings.colorSidecarExtension ?? true)
                 .onChange(async (value) => {
-                    this.plugin.settings.preventDraggingSidecars = value;
+                    this.plugin.settings.colorSidecarExtension = value;
                     await this.plugin.saveSettings();
-                    // Optionally, trigger observer update immediately
-                    if (this.plugin.updateSidecarFileAppearance) { // Changed from updateSidecarDraggableObserver
-                        this.plugin.updateSidecarFileAppearance(); // Changed from updateSidecarDraggableObserver
+                }));
+
+        // Show .md in sidecar extension
+        new Setting(explorerStyleDetails)
+            .setName('Show .md in sidecar extension')
+            .setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showMdInSidecarTag ?? false)
+                .onChange(async (value) => {
+                    this.plugin.settings.showMdInSidecarTag = value;
+                    await this.plugin.saveSettings();
+                    if (this.plugin.updateSidecarFileAppearance) {
+                        this.plugin.updateSidecarFileAppearance();
+                    }
+                    if (this.plugin.updateSidecarHideCss) {
+                        this.plugin.updateSidecarHideCss();
                     }
                 }));
+
+        // Hide main file extension
+        new Setting(explorerStyleDetails)
+            .setName('Hide main file extension')
+            .setDesc((() => {
+                const frag = document.createDocumentFragment();
+                frag.append('Hide the main file extension from sidecar items in the File Explorer, leaving only the ');
+                const codeTag = document.createElement('span');
+                codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example no-color';
+                codeTag.textContent = this.plugin.settings.sidecarSuffix;
+                frag.appendChild(codeTag);
+                frag.append(' suffix.');
+                return frag;
+            })())
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.hideMainExtensionInExplorer ?? false)
+                .onChange(async (value) => {
+                    this.plugin.settings.hideMainExtensionInExplorer = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        // --- End File Explorer Style Collapsible ---
 
         new Setting(containerEl)
             .setName('Management scope')
@@ -307,6 +418,5 @@ export class SidecarSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 })
             );
-
     }
 }
