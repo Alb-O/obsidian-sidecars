@@ -12,6 +12,7 @@ export interface SidecarPluginSettings {
   dimSidecarsInExplorer?: boolean;
   prependSidecarIndicator?: boolean;
   revalidateOnStartup: boolean; // Changed to non-optional
+  preventDraggingSidecars?: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
   dimSidecarsInExplorer: false,
   prependSidecarIndicator: false,
   revalidateOnStartup: true,
+  preventDraggingSidecars: true,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -192,7 +194,7 @@ export class SidecarSettingTab extends PluginSettingTab {
                     });
             });
         
-        new Setting(containerEl).setName('Display').setHeading()
+        new Setting(containerEl).setName('File Explorer').setHeading()
 
         const hideToggleComponent: Setting = new Setting(containerEl)
             .setName('Hide sidecar files in File Explorer')
@@ -230,6 +232,20 @@ export class SidecarSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.prependSidecarIndicator = value;
                     await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName('Prevent dragging of sidecar files in File Explorer')
+            .setDesc('If enabled, sidecar files cannot be dragged in the File Explorer. This helps prevent accidental moves.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.preventDraggingSidecars ?? true)
+                .onChange(async (value) => {
+                    this.plugin.settings.preventDraggingSidecars = value;
+                    await this.plugin.saveSettings();
+                    // Optionally, trigger observer update immediately
+                    if (this.plugin.updateSidecarDraggableObserver) {
+                        this.plugin.updateSidecarDraggableObserver();
+                    }
                 }));
 
         new Setting(containerEl)

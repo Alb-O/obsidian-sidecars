@@ -5,9 +5,55 @@ import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSideca
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 
 export default class SidecarPlugin extends Plugin {
+  sidecarDraggableObserver?: MutationObserver;
+
   settings: SidecarPluginSettings;
   public isInitialRevalidating = false; // Flag to manage initial revalidation state
   public hasFinishedInitialLoad = false; // True after initial vault load
+
+  updateSidecarDraggableObserver() {
+    // Remove observer if it exists
+    if (this.sidecarDraggableObserver) {
+      this.sidecarDraggableObserver.disconnect();
+      this.sidecarDraggableObserver = undefined;
+    }
+    // Only activate if setting is enabled
+    if (!this.settings.preventDraggingSidecars) return;
+    this.sidecarDraggableObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node instanceof HTMLElement && node.classList.contains('nav-file-title')) {
+              const dataPath = node.getAttribute('data-path');
+              if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
+                node.setAttribute('draggable', 'false');
+              }
+            }
+          });
+        }
+      }
+      document.querySelectorAll('.nav-file-title').forEach((el) => {
+        if (el instanceof HTMLElement) {
+          const dataPath = el.getAttribute('data-path');
+          if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
+            el.setAttribute('draggable', 'false');
+          }
+        }
+      });
+    });
+    const navContainer = document.querySelector('.nav-files-container, .workspace-leaf-content .nav-files-container');
+    if (navContainer) {
+      this.sidecarDraggableObserver.observe(navContainer, { childList: true, subtree: true });
+    }
+    document.querySelectorAll('.nav-file-title').forEach((el) => {
+      if (el instanceof HTMLElement) {
+        const dataPath = el.getAttribute('data-path');
+        if (dataPath && dataPath.endsWith(this.settings.sidecarSuffix)) {
+          el.setAttribute('draggable', 'false');
+        }
+      }
+    });
+  }
 
   async onload() {
     await this.loadSettings();
@@ -18,6 +64,7 @@ export default class SidecarPlugin extends Plugin {
 
     // Inject or remove CSS for hiding sidecar files in explorer
     this.updateSidecarHideCss();
+    this.updateSidecarDraggableObserver();
 
     // Dev-utils rename/delete integration removed due to conflicts; using manual handlers exclusively
     console.warn('Sidecar Plugin: using manual rename/delete handlers only.');
@@ -117,6 +164,10 @@ export default class SidecarPlugin extends Plugin {
   }
 
   onunload() {
+    if (this.sidecarDraggableObserver) {
+      this.sidecarDraggableObserver.disconnect();
+      this.sidecarDraggableObserver = undefined;
+    }
     new Notice('Sidecar Plugin unloaded.');
   }
 
