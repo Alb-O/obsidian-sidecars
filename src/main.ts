@@ -1,6 +1,5 @@
 import { Notice, Plugin, TFile } from 'obsidian';
 import { SidecarSettingTab } from './settings';
-import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
 import {
   isMonitoredFileUtil,
   getSidecarPathUtil,
@@ -12,6 +11,8 @@ import {
 } from './utils'; // Updated imports
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarHideCss } from './explorer-style';
+import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
+import { cleanupAllRedirectFiles } from './redirect-manager';
 
 export default class SidecarPlugin extends Plugin {
   sidecarAppearanceObserver?: MutationObserver; // Renamed from sidecarDraggableObserver
@@ -120,34 +121,7 @@ export default class SidecarPlugin extends Plugin {
   }
 
   async cleanupRedirectFiles() {
-    if (!this.settings.enableRedirectFile || !this.settings.redirectFileSuffix?.trim()) {
-      new Notice('Redirect file feature is not enabled or suffix is not configured. Nothing to clean.');
-      return;
-    }
-
-    new Notice(`Starting cleanup of redirect files...`, 3000);
-    let deletedRedirectFileCount = 0;
-    const allFiles = this.app.vault.getFiles();
-
-    for (const file of allFiles) {
-      // Ensure we are dealing with TFile instances before attempting to delete
-      if (file instanceof TFile && this.isRedirectFile(file.path)) {
-        try {
-          await this.app.vault.delete(file);
-          deletedRedirectFileCount++;
-          console.log(`Sidecar Plugin: Deleted redirect file: ${file.path}`);
-        } catch (error) {
-          console.error(`Sidecar Plugin: Error deleting redirect file ${file.path}:`, error);
-          new Notice(`Error deleting redirect file: ${file.name}`);
-        }
-      }
-    }
-
-    if (deletedRedirectFileCount > 0) {
-      new Notice(`Cleanup complete: ${deletedRedirectFileCount} redirect file(s) deleted.`);
-    } else {
-      new Notice(`Cleanup complete: No redirect files found to delete.`);
-    }
+    await cleanupAllRedirectFiles(this);
   }
 
   async revalidateSidecars() {
