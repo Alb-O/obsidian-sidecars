@@ -1,5 +1,6 @@
 import { Notice, TAbstractFile, TFile } from 'obsidian';
 import type SidecarPlugin from './main';
+import { getBasename } from './utils'; // Assuming getBasename is exported from utils.ts
 
 // Track sidecars recently restored to ignore subsequent delete events
 const recentlyRestoredSidecars = new Set<string>();
@@ -62,146 +63,101 @@ export async function handleFileDelete(plugin: SidecarPlugin, file: TAbstractFil
 export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFile, oldPath: string): Promise<void> {
   if (file instanceof TFile) {
     const newPath = file.path;
-    // If the renamed file is a sidecar itself, move it back next to its source file
-    if (plugin.isSidecarFile(oldPath)) {
-      // If the sidecar (now at newPath) was just restored by our plugin,
-      // this rename event is likely self-triggered. Ignore it to prevent misinterpretation.
-      if (recentlyRestoredSidecars.has(newPath)) {
-        return;
-      }
-      const sourcePathBasedOnOld = plugin.getSourcePathFromSidecar(oldPath);
-      if (sourcePathBasedOnOld) {
-        const sourceFile = plugin.app.vault.getAbstractFileByPath(sourcePathBasedOnOld);
-        if (sourceFile instanceof TFile) {
-          const intendedSidecarPath = plugin.getSidecarPath(sourcePathBasedOnOld);
-          if (newPath !== intendedSidecarPath) {
-            try {
-              recentlyRestoredSidecars.add(intendedSidecarPath);
-              await plugin.app.fileManager.renameFile(file, intendedSidecarPath);
-              new Notice(`Moved sidecar back to: ${intendedSidecarPath.split('/').pop()}`);
-            } catch (error) {
-              recentlyRestoredSidecars.delete(intendedSidecarPath); // Remove from set if rename failed
-              console.error(`Sidecar Plugin: Error moving sidecar back from ${newPath} to ${intendedSidecarPath}: `, error);
-              new Notice(`Error restoring sidecar for ${sourceFile.name}`);
-            }
-          }
-        } else {
-          // Source file (sourcePathBasedOnOld) does NOT exist.
-          // This means the sidecar at newPath is an orphan. Delete it.
-          try {
-            await plugin.app.vault.delete(file); // 'file' is the TFile at newPath
-            new Notice(`Deleted orphan sidecar: ${file.name}`);
-          } catch (error) {
-            console.error(`Sidecar Plugin: Error deleting orphan sidecar ${newPath}: `, error);
-          }
+
+    // --- Handle "Redirect File" Creation for Monitored Source Files ---
+    const oldPathWasMonitoredSource = plugin.settings.enableRedirectFile && 
+                                    plugin.isMonitoredFile(oldPath) && 
+                                    !plugin.isSidecarFile(oldPath) && 
+                                    !plugin.isRedirectFile(oldPath);
+
+    if (oldPathWasMonitoredSource) {
+      const redirectFilePath = plugin.getRedirectFilePath(oldPath); // Generate based on the *old* path
+      const redirectFileContent = JSON.stringify({
+        originalPath: oldPath,
+        newPath: newPath,
+        timestamp: new Date().toISOString(),
+      }, null, 2); // Pretty print JSON
+
+      try {
+        const existingRedirectFile = plugin.app.vault.getAbstractFileByPath(redirectFilePath);
+        if (!existingRedirectFile) {
+          await plugin.app.vault.create(redirectFilePath, redirectFileContent);
+          console.log(`Sidecar Plugin: Created redirect file for ${oldPath} at ${redirectFilePath}`);
+          new Notice(`Created .redirect file for ${getBasename(oldPath)}`, 2000);
         }
+      } catch (error) {
+        console.error(`Sidecar Plugin: Error creating redirect file for ${oldPath} at ${redirectFilePath}:`, error);
+        new Notice(`Error creating .redirect file for ${getBasename(oldPath)}`, 3000);
       }
-      return;
     }
 
-    if (plugin.isMonitoredFile(oldPath) && !plugin.isSidecarFile(oldPath)) {
-      const oldSidecarPath = plugin.getSidecarPath(oldPath);
-      const newPotentialSidecarPath = plugin.getSidecarPath(newPath);
-
-      const oldSidecarFileRef = plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
-      const newSidecarFileRefIfMovedWithFolder = plugin.app.vault.getAbstractFileByPath(newPotentialSidecarPath);
-
-      // Scenario 1: Sidecar might have been moved due to a parent folder rename
-      if (!oldSidecarFileRef && newSidecarFileRefIfMovedWithFolder instanceof TFile) {
-        if (!plugin.isMonitoredFile(newPath)) {
-          try {
-            await plugin.app.vault.delete(newSidecarFileRefIfMovedWithFolder);
-            new Notice(`Deleted sidecar for ${newPath} (main file moved to non-monitored area).`);
-          } catch (error) {
-            console.error(`Sidecar Plugin: Error deleting sidecar ${newSidecarFileRefIfMovedWithFolder.path} after folder rename:`, error);
-          }
-        } else {
-          recentlyRestoredSidecars.add(newSidecarFileRefIfMovedWithFolder.path);
-        }
-        return; // Handled this folder rename scenario
+    // --- Standard Sidecar Renaming/Movement Logic ---
+    // If the renamed/moved file IS a sidecar file itself
+    if (plugin.isSidecarFile(newPath)) {
+      const sourcePath = plugin.getSourcePathFromSidecar(newPath);
+      if (sourcePath && !plugin.app.vault.getAbstractFileByPath(sourcePath)) {
+        // This sidecar is now an orphan because its source is gone (likely deleted separately)
+        // Or, the source was renamed and this sidecar didn't get renamed with it (which this handler should prevent)
+        // For now, we'll log it. Revalidation would clean it up.
+        console.warn(`Sidecar Plugin: Renamed sidecar ${newPath} is an orphan. Source ${sourcePath} not found.`);
       }
-
-      // Scenario 2: Regular handling if an old sidecar file exists
-      if (oldSidecarFileRef instanceof TFile) {
-        if (plugin.isMonitoredFile(newPath)) { // Main file's new location IS monitored
-          const intendedSidecarPath = newPotentialSidecarPath; // Same as newPotentialSidecarPath
-
-          if (oldSidecarFileRef.path === intendedSidecarPath) {
-            recentlyRestoredSidecars.add(intendedSidecarPath);
-          } else {
-            const existingFileAtIntendedPath = plugin.app.vault.getAbstractFileByPath(intendedSidecarPath);
-            if (existingFileAtIntendedPath && existingFileAtIntendedPath.path !== oldSidecarFileRef.path) {
-              try {
-                await plugin.app.vault.delete(oldSidecarFileRef);
-                new Notice(`Deleted original sidecar for ${oldPath} (conflict at new location).`);
-                // The existing file at the intended path is now the de facto sidecar, protect it.
-                recentlyRestoredSidecars.add(intendedSidecarPath);
-              } catch (error) {
-                 console.error(`Sidecar Plugin: Error deleting original sidecar ${oldSidecarFileRef.path} due to conflict:`, error);
-              }
-            } else if (!existingFileAtIntendedPath) { // Target does not exist, proceed with rename
-              try {
-                recentlyRestoredSidecars.add(intendedSidecarPath);
-                await plugin.app.fileManager.renameFile(oldSidecarFileRef, intendedSidecarPath);
-                new Notice(`Moved sidecar to: ${intendedSidecarPath.split('/').pop()}`);
-              } catch (error) {
-                recentlyRestoredSidecars.delete(intendedSidecarPath);
-                console.error(`Sidecar Plugin: Error moving sidecar file from ${oldSidecarFileRef.path} to ${intendedSidecarPath}: `, error);
-              }
-            } else {
-              // Sidecar rename skipped, likely due to existing file at intended path
-            }
-          }
-        } else { // Main file's new location IS NOT monitored
-          try {
-            if (recentlyRestoredSidecars.has(oldSidecarFileRef.path)) {
-              recentlyRestoredSidecars.delete(oldSidecarFileRef.path);
-            }
-            await plugin.app.vault.delete(oldSidecarFileRef);
-            new Notice(`Deleted sidecar for ${oldPath} (main file moved to non-monitored area).`);
-          } catch (error) {
-            console.error(`Sidecar Plugin: Error deleting sidecar ${oldSidecarFileRef.path} after main file moved out: `, error);
-          }
-        }
-      } else if (plugin.isMonitoredFile(newPath)) { // No old sidecar, but new location IS monitored
-        if (!plugin.app.vault.getAbstractFileByPath(newPotentialSidecarPath)) {
-          try {
-            await plugin.app.vault.create(newPotentialSidecarPath, ''); // Changed to empty string
-            new Notice(`Created sidecar for renamed file: ${newPotentialSidecarPath.split('/').pop()}`);
-          } catch (error) {
-            if (String(error).includes('File already exists')) {
-                // Sidecar already exists, creation skipped.
-            } else {
-                console.error(`Sidecar Plugin: Error creating sidecar for renamed file ${newPotentialSidecarPath}: `, error);
-            }
-          }
-        }
-      }
-      // If oldPath was monitored, but newPath is not, and there was no oldSidecarFile, nothing to do.
+      // If it is a sidecar, its appearance might need updating based on its new path/name
+      plugin.updateSidecarFileAppearance(); 
+      return; // Stop here, sidecar itself was moved.
     }
-    // Handle files moved into monitored folder from non-monitored location
-    else if (plugin.isMonitoredFile(newPath) && !plugin.isMonitoredFile(oldPath)) {
-      const oldSidecarPath = plugin.getSidecarPath(oldPath);
+
+    // If the renamed/moved file was a source file that HAD a sidecar at the OLD location
+    const oldSidecarPath = plugin.getSidecarPath(oldPath);
+    const oldSidecarFile = plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
+
+    if (oldSidecarFile instanceof TFile) {
+      // Source file was renamed/moved, so rename/move its sidecar too
       const newSidecarPath = plugin.getSidecarPath(newPath);
-      const oldSidecarFile = plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
-      if (oldSidecarFile instanceof TFile) {
-        // Move existing sidecar from old location to new location
-        try {
-          await plugin.app.fileManager.renameFile(oldSidecarFile, newSidecarPath);
-          new Notice(`Moved sidecar to: ${newSidecarPath.split('/').pop()}`);
-        } catch (error) {
-          console.error(`Sidecar Plugin: Error moving sidecar file from ${oldSidecarPath} to ${newSidecarPath}: `, error);
-          new Notice(`Error moving sidecar for ${newPath}`);
+      try {
+        // Check if a file/folder already exists at the target newSidecarPath
+        const existingNewSidecar = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
+        if (existingNewSidecar && existingNewSidecar.path !== oldSidecarFile.path) { // Don't conflict with itself if no actual move
+          console.warn(`Sidecar Plugin: Sidecar for ${newPath} already exists at ${newSidecarPath}. Cannot move ${oldSidecarPath}.`);
+          new Notice(`Sidecar for ${getBasename(newPath)} already exists. Old sidecar not moved.`, 3000);
+          // Optionally, delete the oldSidecarFile here if it's considered redundant and we don't want duplicates.
+          // await plugin.app.vault.delete(oldSidecarFile);
+        } else if (!existingNewSidecar || existingNewSidecar.path === oldSidecarFile.path) {
+          // If it doesn't exist, or it exists but it *is* the old sidecar (i.e. just a name change in same folder)
+          await plugin.app.vault.rename(oldSidecarFile, newSidecarPath);
+          console.log(`Sidecar Plugin: Moved sidecar from ${oldSidecarPath} to ${newSidecarPath}`);
+          // No user notice here as it's an automatic accompanying action.
         }
-      } else if (!plugin.app.vault.getAbstractFileByPath(newSidecarPath)) {
-        // No existing sidecar; create a new one
+      } catch (error) {
+        console.error(`Sidecar Plugin: Error moving sidecar from ${oldSidecarPath} to ${newSidecarPath}:`, error);
+        new Notice(`Error moving sidecar for ${getBasename(newPath)}`, 3000);
+      }
+    } else {
+      // Renamed file was not a sidecar, and didn't have one. If it's now monitored, create one.
+      if (plugin.isMonitoredFile(newPath) && !plugin.isSidecarFile(newPath) && !plugin.isRedirectFile(newPath)) {
+        const newSidecarPath = plugin.getSidecarPath(newPath);
+        const existingSidecar = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
+        if (!existingSidecar) {
+          try {
+            await plugin.app.vault.create(newSidecarPath, '');
+            console.log(`Sidecar Plugin: Created new sidecar at ${newSidecarPath} for renamed file ${newPath}`);
+          } catch (error) {
+            console.error(`Sidecar Plugin: Error creating new sidecar for renamed file ${newPath}:`, error);
+          }
+        }
+      }
+    }
+    plugin.updateSidecarFileAppearance(); // Update appearance for all relevant files
+    // --- Cleanup redirect files when a file is moved back to its original location ---
+    if (plugin.settings.enableRedirectFile) {
+      const redirectCleanupPath = plugin.getRedirectFilePath(newPath);
+      const redirectFileToCleanup = plugin.app.vault.getAbstractFileByPath(redirectCleanupPath);
+      if (redirectFileToCleanup instanceof TFile) {
         try {
-          await plugin.app.vault.create(newSidecarPath, ''); // Changed to empty string
-          new Notice(`Created sidecar for moved file: ${newSidecarPath.split('/').pop()}`);
-        } catch (error) {
-          // Ignore if already exists
-          if (String(error).includes('File already exists')) return;
-          console.error(`Sidecar Plugin: Error creating sidecar for moved file ${newSidecarPath}: `, error);
+          await plugin.app.vault.delete(redirectFileToCleanup);
+          console.log(`Sidecar Plugin: Cleaned up redirect file at ${redirectCleanupPath} after file was restored.`);
+          new Notice(`Cleaned up .redirect file for ${getBasename(newPath)}`, 2000);
+        } catch (err) {
+          console.error(`Sidecar Plugin: Error cleaning up redirect file at ${redirectCleanupPath}:`, err);
         }
       }
     }

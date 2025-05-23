@@ -52,6 +52,30 @@
   opacity: 1;
 }
 
+.nav-file-tag.redirect-tag {
+  color: var(--text-error);
+  opacity: var(--link-unresolved-opacity);
+  display: inline-block;
+}
+
+.nav-file-tag.redirect-tag.no-color {
+  color: unset;
+}
+
+.nav-file-tag.redirect-tag.dimmed {
+  opacity: var(--link-unresolved-opacity);
+}
+
+.nav-file-tag.redirect-tag.dimmed.no-color {
+  opacity: 1;
+}
+
+/* Restore opacity for dimmed tags when their parent item is hovered or active */
+.nav-file-title:hover .nav-file-tag.redirect-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.redirect-tag.dimmed {
+  opacity: 1;
+}
+
 .sidecar-tag-example {
   margin-left: 0 !important; /* Override existing margin */
 }

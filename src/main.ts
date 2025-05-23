@@ -1,7 +1,15 @@
 import { Notice, Plugin, TFile } from 'obsidian';
 import { SidecarSettingTab } from './settings';
 import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
-import { isMonitoredFile, getSidecarPath, isSidecarFile, getSourcePathFromSidecar } from './utils';
+import {
+  isMonitoredFileUtil,
+  getSidecarPathUtil,
+  isSidecarFileUtil,
+  getSourcePathFromSidecarUtil,
+  isRedirectFileUtil,
+  getRedirectFilePathUtil,
+  getSourcePathFromRedirectFileUtil
+} from './utils'; // Updated imports
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarHideCss } from './explorer-style';
 
@@ -65,6 +73,14 @@ export default class SidecarPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'cleanup-redirect-files',
+      name: 'Cleanup all redirect files',
+      callback: () => {
+        this.cleanupRedirectFiles();
+      },
+    });
+
     new Notice('Sidecar Plugin loaded.');
   }
 
@@ -88,6 +104,13 @@ export default class SidecarPlugin extends Plugin {
     if (typeof this.settings.revalidateOnStartup === 'undefined') {
       this.settings.revalidateOnStartup = DEFAULT_SETTINGS.revalidateOnStartup;
     }
+    // Ensure new "redirect file" settings have defaults if missing (for upgrades)
+    if (typeof this.settings.enableRedirectFile === 'undefined') {
+      this.settings.enableRedirectFile = DEFAULT_SETTINGS.enableRedirectFile;
+    }
+    if (typeof this.settings.redirectFileSuffix === 'undefined') {
+      this.settings.redirectFileSuffix = DEFAULT_SETTINGS.redirectFileSuffix;
+    }
   }
 
   async saveSettings() {
@@ -96,21 +119,51 @@ export default class SidecarPlugin extends Plugin {
     this.updateSidecarFileAppearance(); // Added this call to refresh appearance on settings change
   }
 
+  async cleanupRedirectFiles() {
+    if (!this.settings.enableRedirectFile || !this.settings.redirectFileSuffix?.trim()) {
+      new Notice('Redirect file feature is not enabled or suffix is not configured. Nothing to clean.');
+      return;
+    }
+
+    new Notice(`Starting cleanup of redirect files...`, 3000);
+    let deletedRedirectFileCount = 0;
+    const allFiles = this.app.vault.getFiles();
+
+    for (const file of allFiles) {
+      // Ensure we are dealing with TFile instances before attempting to delete
+      if (file instanceof TFile && this.isRedirectFile(file.path)) {
+        try {
+          await this.app.vault.delete(file);
+          deletedRedirectFileCount++;
+          console.log(`Sidecar Plugin: Deleted redirect file: ${file.path}`);
+        } catch (error) {
+          console.error(`Sidecar Plugin: Error deleting redirect file ${file.path}:`, error);
+          new Notice(`Error deleting redirect file: ${file.name}`);
+        }
+      }
+    }
+
+    if (deletedRedirectFileCount > 0) {
+      new Notice(`Cleanup complete: ${deletedRedirectFileCount} redirect file(s) deleted.`);
+    } else {
+      new Notice(`Cleanup complete: No redirect files found to delete.`);
+    }
+  }
+
   async revalidateSidecars() {
     new Notice(`Starting sidecar revalidation...`, 3000);
     
     let newlyCreatedSidecarCount = 0;
     let countMonitoredFilesWithSidecars = 0;
     let deletedOrphanCount = 0;
-    let deletedNonMonitoredSourceCount = 0;
 
     const allFiles = this.app.vault.getFiles();
-    const allFilePaths = new Set(allFiles.map(f => f.path)); // Represents files at the START of revalidation
+    const allFilePaths = new Set(allFiles.map(f => f.path)); 
 
     // Phase 1: Ensure monitored files have sidecars
     for (const file of allFiles) {
-      const isMonitored = this.isMonitoredFile(file.path);
-      const sidecarPath = this.getSidecarPath(file.path);
+      const isMonitored = this.isMonitoredFile(file.path); // Uses the class method
+      const sidecarPath = this.getSidecarPath(file.path); // Uses the class method
       const initialSidecarExists = allFilePaths.has(sidecarPath);
 
       if (isMonitored) {
@@ -120,9 +173,9 @@ export default class SidecarPlugin extends Plugin {
           try {
             const createdFile = await this.app.vault.create(sidecarPath, ''); 
             
-            if (createdFile) { // Check if creation was successful
-              newlyCreatedSidecarCount++; // Increment only if a new file was actually created
-              allFilePaths.add(sidecarPath); // Update our set of known files
+            if (createdFile) { 
+              newlyCreatedSidecarCount++; 
+              allFilePaths.add(sidecarPath); 
               sidecarEnsuredThisIteration = true;
             } else {
               console.warn(`Sidecar Plugin: vault.create for ${sidecarPath} returned null/undefined. Sidecar might not have been created.`);
@@ -141,8 +194,8 @@ export default class SidecarPlugin extends Plugin {
     const currentFilesAfterCreation = this.app.vault.getFiles(); 
 
     for (const file of currentFilesAfterCreation) {
-      if (this.isSidecarFile(file.path)) {
-        const sourcePath = this.getSourcePathFromSidecar(file.path);
+      if (this.isSidecarFile(file.path)) { // Uses the class method
+        const sourcePath = this.getSourcePathFromSidecar(file.path); // Uses the class method
         let shouldDelete = false;
         let reason = "";
 
@@ -158,8 +211,7 @@ export default class SidecarPlugin extends Plugin {
             shouldDelete = true;
             reason = "source is a folder, not a file";
           } else {
-            // Source file exists and is a TFile, check if it's (still) monitored
-            if (!this.isMonitoredFile(sourcePath)) {
+            if (!this.isMonitoredFile(sourcePath)) { // Uses the class method
               shouldDelete = true;
               reason = "source file no longer monitored";
             }
@@ -168,51 +220,54 @@ export default class SidecarPlugin extends Plugin {
 
         if (shouldDelete) {
           try {
-            // Ensure the file reference is current before deleting
             const sidecarFileToDelete = this.app.vault.getAbstractFileByPath(file.path);
             if (sidecarFileToDelete instanceof TFile) {
               await this.app.vault.delete(sidecarFileToDelete);
-              if (reason) {
-                console.log(`Sidecar Plugin: Deleted sidecar ${file.path} during revalidation - ${reason}.`);
-              } else {
-                console.log(`Sidecar Plugin: Deleted sidecar ${file.path} during revalidation.`);
-              }
               deletedOrphanCount++;
-            } else {
-              console.warn(`Sidecar Plugin: Unable to delete ${file.path} - not a valid file reference.`);
+              console.log(`Sidecar Plugin: Deleted orphan sidecar ${file.path} because: ${reason}`);
             }
           } catch (error) {
-            console.error(`Sidecar Plugin: Error deleting sidecar ${file.path} during revalidation: `, error);
+            console.error(`Sidecar Plugin: Error deleting orphan sidecar ${file.path}: `, error);
           }
         }
       }
     }
-
-    // Phase 3: Refresh appearance and CSS after a small delay to allow UI to catch up
-    setTimeout(() => {
-      this.updateSidecarHideCss();
-      this.updateSidecarFileAppearance();
-    }, 50);
-
-    // Final log summary
-    console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}, Deleted non-monitored sources: ${deletedNonMonitoredSourceCount}`);
-
+    
+    console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
     new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
   }
 
+  // --- Utility Method Wrappers for Plugin Class ---
+  // These methods now correctly call the imported utility functions,
+  // passing the plugin's settings and providing the necessary context.
+
   isMonitoredFile(filePath: string): boolean {
-    return isMonitoredFile(filePath, this.settings, (fp) => this.isSidecarFile(fp));
+    return isMonitoredFileUtil(filePath, this.settings, (fp) => {
+      return this.isSidecarFile(fp) || this.isRedirectFile(fp);
+    });
   }
 
   getSidecarPath(filePath: string): string {
-    return getSidecarPath(filePath, this.settings);
+    return getSidecarPathUtil(filePath, this.settings);
   }
 
   isSidecarFile(filePath: string): boolean {
-    return isSidecarFile(filePath, this.settings);
+    return isSidecarFileUtil(filePath, this.settings);
   }
 
   getSourcePathFromSidecar(sidecarPath: string): string | null {
-    return getSourcePathFromSidecar(sidecarPath, this.settings);
+    return getSourcePathFromSidecarUtil(sidecarPath, this.settings);
+  }
+
+  isRedirectFile(filePath: string): boolean {
+    return isRedirectFileUtil(filePath, this.settings);
+  }
+
+  getRedirectFilePath(originalSourcePath: string): string {
+    return getRedirectFilePathUtil(originalSourcePath, this.settings);
+  }
+
+  getSourcePathFromRedirectFile(redirectFilePath: string): string | null {
+    return getSourcePathFromRedirectFileUtil(redirectFilePath, this.settings);
   }
 }

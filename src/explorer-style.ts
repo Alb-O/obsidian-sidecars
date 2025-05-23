@@ -19,7 +19,7 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		const innerContentEl = el.querySelector(".tree-item-inner");
 
 		// Remove any existing extension tags inside nav-file-title
-		Array.from(el.querySelectorAll('.main-ext-tag, .sidecar-tag')).forEach((tag) => tag.remove());
+		Array.from(el.querySelectorAll('.main-ext-tag, .sidecar-tag, .redirect-tag')).forEach((tag) => tag.remove());
 
 		if (isSidecar) {
 			// 1. Set draggable attribute based on settings
@@ -76,6 +76,52 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			el.appendChild(sidecarTagEl);
 
 			// Reset draggable status if we set it
+			if (el.getAttribute("draggable") === "false") {
+				el.removeAttribute("draggable");
+			}
+		}
+
+		// --- Handle redirect files ---
+		const fullRedirectExtension = '.' + plugin.settings.redirectFileSuffix + '.md';
+		const isRedirect = dataPath.endsWith(fullRedirectExtension);
+		if (isRedirect) {
+			if (plugin.settings.preventDraggingSidecars) {
+				el.setAttribute("draggable", "false");
+			} else {
+				el.removeAttribute("draggable");
+			}
+			if (innerContentEl) {
+				innerContentEl.textContent = "";
+				// Show the base name (without .redirect.md)
+				const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
+				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+				const dotIndex = sourceFileName.lastIndexOf(".");
+				const baseName = dotIndex !== -1 ? sourceFileName.slice(0, dotIndex) : sourceFileName;
+				innerContentEl.appendChild(document.createTextNode(baseName));
+			}
+			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
+			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
+				const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
+				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+				const dotIndex = sourceFileName.lastIndexOf(".");
+				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
+				if (mainExt) {
+					const mainExtTag = document.createElement("div");
+					mainExtTag.className = "nav-file-tag main-ext-tag";
+					mainExtTag.textContent = mainExt.toUpperCase();
+					el.appendChild(mainExtTag);
+				}
+			}
+			// Append redirect suffix tag as child
+			const redirectTagEl = document.createElement("div");
+			let classList = "nav-file-tag redirect-tag";
+			if (plugin.settings.dimSidecarsInExplorer)
+				classList += " dimmed";
+			if (plugin.settings.colorSidecarExtension === false)
+				classList += " no-color";
+			redirectTagEl.className = classList;
+			redirectTagEl.textContent = plugin.settings.redirectFileSuffix + (plugin.settings.showMdInSidecarTag ? ".md" : "");
+			el.appendChild(redirectTagEl);
 			if (el.getAttribute("draggable") === "false") {
 				el.removeAttribute("draggable");
 			}
@@ -197,20 +243,25 @@ export function updateSidecarHideCss(plugin: SidecarPlugin) {
 	let styleTextContent = "";
 
 	const fullSidecarExtension = "." + plugin.settings.sidecarSuffix + ".md";
+	const fullRedirectExtension = "." + plugin.settings.redirectFileSuffix + ".md";
 
 	if (plugin.settings.hideSidecarsInExplorer) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}'] {
+      .nav-file-title[data-path$='${fullSidecarExtension}'],
+      .nav-file-title[data-path$='${fullRedirectExtension}'] {
         display: none !important;
       }
     `;
 	} else if (plugin.settings.dimSidecarsInExplorer) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}'] {
+      .nav-file-title[data-path$='${fullSidecarExtension}'],
+      .nav-file-title[data-path$='${fullRedirectExtension}'] {
         color: var(--text-faint) !important;
       }
       .nav-file-title[data-path$='${fullSidecarExtension}']:hover,
-      .nav-file-title[data-path$='${fullSidecarExtension}'].is-active {
+      .nav-file-title[data-path$='${fullSidecarExtension}'].is-active,
+      .nav-file-title[data-path$='${fullRedirectExtension}']:hover,
+      .nav-file-title[data-path$='${fullRedirectExtension}'].is-active {
         color: var(--text-muted) !important;
       }
     `;
@@ -218,15 +269,18 @@ export function updateSidecarHideCss(plugin: SidecarPlugin) {
 
 	if (plugin.settings.prependSidecarIndicator) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}']::before {
+      .nav-file-title[data-path$='${fullSidecarExtension}']::before,
+      .nav-file-title[data-path$='${fullRedirectExtension}']::before {
         content: "⮡";
         padding-left: 0.2em;
         padding-right: 0.75em;
       }
-      .nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-inner {
+      .nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-inner,
+      .nav-file-title[data-path$='${fullRedirectExtension}'] .tree-item-inner {
         vertical-align: text-top;
       }
-      .nav-file-title[data-path$='${fullSidecarExtension}'] {
+      .nav-file-title[data-path$='${fullSidecarExtension}'],
+      .nav-file-title[data-path$='${fullRedirectExtension}'] {
         padding-top: 0px !important;
         padding-bottom: calc(2 * var(--size-4-1)) !important;
       }

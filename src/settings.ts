@@ -16,6 +16,9 @@ export interface SidecarPluginSettings {
   colorSidecarExtension?: boolean;
   hideMainExtensionInExplorer?: boolean;
   showMdInSidecarTag?: boolean;
+  // New "Leave Redirect" File Feature
+  enableRedirectFile: boolean;
+  redirectFileSuffix: string;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -32,6 +35,9 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
   colorSidecarExtension: true,
   hideMainExtensionInExplorer: false,
   showMdInSidecarTag: false,
+  // New "Leave Redirect" File Feature
+  enableRedirectFile: false,
+  redirectFileSuffix: 'redirect',
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -422,5 +428,55 @@ export class SidecarSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 })
             );
+
+        // --- Redirect File Settings ---
+		new Setting(containerEl).setName('Redirect Files').setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable redirect files')
+			.setDesc('This is setting is only relevant to advanced user integrating sidecars with other tools. When a monitored file is moved or renamed, create an extra redirect file in its original location. This file stores information about where the original file was moved to, which can be useful for other tools or scripts.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableRedirectFile)
+				.onChange(async (value) => {
+					this.plugin.settings.enableRedirectFile = value;
+					await this.plugin.saveSettings();
+					this.display(); // Refresh settings tab to show/hide suffix input
+				}));
+
+		if (this.plugin.settings.enableRedirectFile) {
+			new Setting(containerEl)
+				.setName('Redirect file suffix')
+				.setDesc('The suffix for redirect files. Do not include periods or the .md extension.')
+				.addText(text => {
+					text.setPlaceholder('redirect')
+						.setValue(this.plugin.settings.redirectFileSuffix);
+
+					const validateAndSaveRedirectSuffix = async () => {
+						const currentValue = text.inputEl.value.trim();
+						if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
+							if (this.plugin.settings.redirectFileSuffix !== currentValue) {
+								this.plugin.settings.redirectFileSuffix = currentValue;
+								await this.plugin.saveSettings();
+							}
+							text.inputEl.removeClass('sidecar-setting-error');
+						} else if (currentValue.length > 0) { // Only show error if not empty but invalid
+							text.inputEl.addClass('sidecar-setting-error');
+							new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
+						} else { // Is empty
+							text.inputEl.addClass('sidecar-setting-error');
+							new Notice('Suffix cannot be empty.', 3000);
+						}
+					};
+
+					text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
+					text.inputEl.onkeydown = (event) => { // Save on Enter
+						if (event.key === 'Enter') {
+							event.preventDefault();
+							validateAndSaveRedirectSuffix();
+						}
+					};
+				});
+		}
+		// --- End Leave Redirect File Settings ---
     }
 }
