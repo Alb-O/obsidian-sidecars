@@ -194,28 +194,25 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				clearTimeout(styleUpdateTimeout);
 			}
 
-			// Use a brief timeout (30ms) to debounce multiple rapid mutations
+			// Use a brief timeout to debounce multiple rapid mutations and allow DOM to settle
 			styleUpdateTimeout = setTimeout(() => {
 				// First, process any directly affected nodes
 				if (affectedNodes.size > 0) {
 					affectedNodes.forEach((node) => processNavItem(node));
 				}
 
-				// If we had data-path changes or folder structure changes, refresh all sidecars
+				// If we had data-path changes, refresh relevant files
 				// This ensures that moved files are properly styled
 				if (dataPathChanged) {
-					document
-						.querySelectorAll(
-							'.nav-file-title[data-path$=".' +
-								plugin.settings.sidecarSuffix +
-								'.md"]'
-						)
+					const query = '.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"], ' +
+					              '.nav-file-title[data-path$=".' + plugin.settings.redirectFileSuffix + '.md"]';
+					document.querySelectorAll(query)
 						.forEach((el) => {
 							if (el instanceof HTMLElement) processNavItem(el);
 						});
 				}
 				styleUpdateTimeout = null;
-			}, 20);
+			}, 50); // Increased timeout from 20ms to 50ms
 		}
 	});
 	const navContainer = document.querySelector(

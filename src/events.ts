@@ -84,6 +84,8 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
           await plugin.app.vault.create(redirectFilePath, redirectFileContent);
           console.log(`Sidecar Plugin: Created redirect file for ${oldPath} at ${redirectFilePath}`);
           new Notice(`Created .redirect file for ${getBasename(oldPath)}`, 2000);
+          // Ensure the explorer updates to show the new redirect file correctly styled
+          plugin.updateSidecarFileAppearance(); 
         }
       } catch (error) {
         console.error(`Sidecar Plugin: Error creating redirect file for ${oldPath} at ${redirectFilePath}:`, error);
