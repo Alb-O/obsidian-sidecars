@@ -1,7 +1,7 @@
 {
 	"id": "sidecars",
 	"name": "Sidecars",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"minAppVersion": "1.18.10",
 	"description": "Demonstrates some of the capabilities of the Obsidian API.",
 	"author": "Albert O'Shea",
