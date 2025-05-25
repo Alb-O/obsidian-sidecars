@@ -1,86 +1,88 @@
 .multiple-text-component {
-  /* Not sure if there is a non-hardcoded way to align with other single-line text components */
-  min-width: 164.8px;
+	/* Not sure if there is a non-hardcoded way to align with other single-line text components */
+	min-width: 164.8px;
 }
 
 .multiple-text-component textarea {
-  /* Does this have fine compatibility? */
-  field-sizing: content;
-  resize: none;
-  min-width: 164.8px; 
+	/* Does this have fine compatibility? */
+	field-sizing: content;
+	resize: none;
+	min-width: 164.8px;
 }
 
 .sidecar-notice-green {
-  color: var(--color-green, #4caf50);
-}
-.sidecar-notice-red {
-  color: var(--color-red, #f44336);
-}
-.sidecar-notice-value {
-  font-weight: bold;
+	color: var(--color-green, #4caf50);
 }
 
-/* Prevent double .md tag for sidecars: selectors for sidecar files are now generated dynamically in JS based on the sidecarSuffix setting. The following is an example for documentation only: */
-/*
-.nav-file-title[data-path$='.side.md'] .nav-file-tag:not(.sidecar-tag):not(.sidecar-mainext-tag) {
-  display: none !important;
+.sidecar-notice-red {
+	color: var(--color-red, #f44336);
 }
-*/
+
+.sidecar-notice-value {
+	font-weight: bold;
+}
 
 .nav-file-tag.sidecar-tag {
-  color: var(--text-accent);
-  display: inline-block;
+	color: var(--text-accent);
+	display: inline-block;
 }
 
 .nav-file-tag.sidecar-tag.no-color {
-  color: unset;
+	color: unset;
 }
 
 /* When a sidecar tag should be dimmed, make it more transparent */
 .nav-file-tag.sidecar-tag.dimmed {
-  opacity: var(--link-unresolved-opacity); /* Use opacity for dimming */
+	opacity: var(--link-unresolved-opacity);
+	/* Use opacity for dimming */
 }
 
 /* If a dimmed tag is also set to 'no-color', do not reduce its opacity */
 .nav-file-tag.sidecar-tag.dimmed.no-color {
-  opacity: 1; /* Override general dimming for no-color tags */
+	opacity: 1;
+	/* Override general dimming for no-color tags */
 }
 
 /* Restore opacity for dimmed tags when their parent item is hovered or active */
 .nav-file-title:hover .nav-file-tag.sidecar-tag.dimmed,
 .nav-file-title.is-active .nav-file-tag.sidecar-tag.dimmed {
-  opacity: 1;
+	opacity: 1;
 }
 
 .nav-file-tag.redirect-tag {
-  color: var(--text-error);
-  opacity: var(--link-unresolved-opacity);
-  display: inline-block;
+	color: var(--text-error);
+	opacity: var(--link-unresolved-opacity);
+	display: inline-block;
 }
 
 .nav-file-tag.redirect-tag.no-color {
-  color: unset;
+	color: unset;
 }
 
 .nav-file-tag.redirect-tag.dimmed {
-  opacity: var(--link-unresolved-opacity);
+	opacity: var(--link-unresolved-opacity);
 }
 
 .nav-file-tag.redirect-tag.dimmed.no-color {
-  opacity: 1;
+	opacity: 1;
 }
 
-/* Restore opacity for dimmed tags when their parent item is hovered or active */
 .nav-file-title:hover .nav-file-tag.redirect-tag.dimmed,
 .nav-file-title.is-active .nav-file-tag.redirect-tag.dimmed {
-  opacity: 1;
+	opacity: 1;
+}
+
+/* Main extension tag styles */
+.nav-file-tag.main-ext-tag {
+	display: inline-block;
 }
 
 .sidecar-tag-example {
-  margin-left: 0 !important; /* Override existing margin */
+	margin-left: 0 !important;
+	/* Override existing margin */
 }
 
-.sidecar-explorer-style-settings > summary {
-  padding-bottom: 0.75em;
-  font-weight: var(--font-semibold);
+.sidecar-explorer-style-settings>summary {
+	padding-bottom: 0.75em;
+	font-weight: var(--font-semibold);
 }

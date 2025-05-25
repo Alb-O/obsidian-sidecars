@@ -205,7 +205,7 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				// This ensures that moved files are properly styled
 				if (dataPathChanged) {
 					const query = '.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"], ' +
-					              '.nav-file-title[data-path$=".' + plugin.settings.redirectFileSuffix + '.md"]';
+						'.nav-file-title[data-path$=".' + plugin.settings.redirectFileSuffix + '.md"]';
 					document.querySelectorAll(query)
 						.forEach((el) => {
 							if (el instanceof HTMLElement) processNavItem(el);
@@ -234,56 +234,69 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 	}
 }
 
-export function updateSidecarHideCss(plugin: SidecarPlugin) {
-	const id = "sidecar-visibility-style";
+export function updateSidecarCss(plugin: SidecarPlugin) {
+	const id = "sidecar-styles";
 	let styleElement = document.getElementById(id) as HTMLStyleElement | null;
 	let styleTextContent = "";
 
 	const fullSidecarExtension = "." + plugin.settings.sidecarSuffix + ".md";
 	const fullRedirectExtension = "." + plugin.settings.redirectFileSuffix + ".md";
 
+	// File visibility styles
 	if (plugin.settings.hideSidecarsInExplorer) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}'],
-      .nav-file-title[data-path$='${fullRedirectExtension}'] {
-        display: none !important;
-      }
-    `;
+		.nav-file-title[data-path$='${fullSidecarExtension}'],
+		.nav-file-title[data-path$='${fullRedirectExtension}'] {
+			display: none !important;
+		}
+		`;
 	} else if (plugin.settings.dimSidecarsInExplorer) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}'],
-      .nav-file-title[data-path$='${fullRedirectExtension}'] {
-        color: var(--text-faint) !important;
-      }
-      .nav-file-title[data-path$='${fullSidecarExtension}']:hover,
-      .nav-file-title[data-path$='${fullSidecarExtension}'].is-active,
-      .nav-file-title[data-path$='${fullRedirectExtension}']:hover,
-      .nav-file-title[data-path$='${fullRedirectExtension}'].is-active {
-        color: var(--text-muted) !important;
-      }
-    `;
+		.nav-file-title[data-path$='${fullSidecarExtension}'],
+		.nav-file-title[data-path$='${fullRedirectExtension}'] {
+			color: var(--text-faint) !important;
+		}
+		.nav-file-title[data-path$='${fullSidecarExtension}']:hover,
+		.nav-file-title[data-path$='${fullSidecarExtension}'].is-active,
+		.nav-file-title[data-path$='${fullRedirectExtension}']:hover,
+		.nav-file-title[data-path$='${fullRedirectExtension}'].is-active {
+			color: var(--text-muted) !important;
+		}
+		`;
 	}
 
+	// Arrow indicator styles
 	if (plugin.settings.prependSidecarIndicator) {
 		styleTextContent += `
-      .nav-file-title[data-path$='${fullSidecarExtension}']::before,
-      .nav-file-title[data-path$='${fullRedirectExtension}']::before {
-        content: "⮡";
-        padding-left: 0.2em;
-        padding-right: 0.75em;
-      }
-      .nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-inner,
-      .nav-file-title[data-path$='${fullRedirectExtension}'] .tree-item-inner {
-        vertical-align: text-top;
-      }
-      .nav-file-title[data-path$='${fullSidecarExtension}'],
-      .nav-file-title[data-path$='${fullRedirectExtension}'] {
-        padding-top: 0px !important;
-        padding-bottom: calc(2 * var(--size-4-1)) !important;
-      }
-    `;
+		.nav-file-title[data-path$='${fullSidecarExtension}']::before,
+		.nav-file-title[data-path$='${fullRedirectExtension}']::before {
+			content: "⮡";
+			padding-left: 0.2em;
+			padding-right: 0.75em;
+		}
+		.nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-inner,
+		.nav-file-title[data-path$='${fullRedirectExtension}'] .tree-item-inner {
+			vertical-align: text-top;
+		}
+		.nav-file-title[data-path$='${fullSidecarExtension}'],
+		.nav-file-title[data-path$='${fullRedirectExtension}'] {
+			padding-top: 0px !important;
+			padding-bottom: calc(2 * var(--size-4-1)) !important;
+		}
+		`;
 	}
+	// Hide default .md extensions for sidecar files (dynamic - uses template variables)
+	styleTextContent += `
+	/* Hide default .md extensions for sidecar files */
+	.nav-file-title[data-path$='${fullSidecarExtension}'] .nav-file-tag:not(.sidecar-tag):not(.main-ext-tag):not(.redirect-tag) {
+		display: none !important;
+	}
+	.nav-file-title[data-path$='${fullRedirectExtension}'] .nav-file-tag:not(.sidecar-tag):not(.main-ext-tag):not(.redirect-tag) {
+		display: none !important;
+	}
+	`;
 
+	// Apply or remove styles
 	if (styleTextContent) {
 		if (!styleElement) {
 			styleElement = document.createElement("style");
