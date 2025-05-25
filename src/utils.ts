@@ -158,11 +158,11 @@ export function isRedirectFileUtil(filePath: string, settings: SidecarPluginSett
 }
 
 /**
- * Generates the path for a redirect file given the original path of the source file.
- * The redirect file is placed in the same directory as the original source file, with
+ * Generates the path for a redirect file given the original path of the main file.
+ * The redirect file is placed in the same directory as the original main file, with
  * the original full name followed by the redirect suffix and .md extension.
- * E.g., "folder/source.ext" -> "folder/source.ext.redirect.md"
- * @param originalSourcePath The original path of the source file that was moved/renamed.
+ * E.g., "folder/main.ext" -> "folder/main.ext.redirect.md"
+ * @param originalSourcePath The original path of the main file that was moved/renamed.
  * @param settings The plugin settings.
  * @returns The path for the redirect file.
  */
@@ -171,11 +171,11 @@ export function getRedirectFilePathUtil(originalSourcePath: string, settings: Si
 }
 
 /**
- * Extracts the original source file path from a redirect file's path.
- * E.g., "folder/source.ext.redirect.md" -> "folder/source.ext"
+ * Extracts the original main file path from a redirect file's path.
+ * E.g., "folder/main.ext.redirect.md" -> "folder/main.ext"
  * @param redirectFilePath The path of the redirect file.
  * @param settings The plugin settings.
- * @returns The original source file path, or null if the path is not a valid redirect file path.
+ * @returns The original main file path, or null if the path is not a valid redirect file path.
  */
 export function getSourcePathFromRedirectFileUtil(redirectFilePath: string, settings: SidecarPluginSettings): string | null {
 	if (!settings.enableRedirectFile || !settings.redirectFileSuffix || settings.redirectFileSuffix.trim() === '') {

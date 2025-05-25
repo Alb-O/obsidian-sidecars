@@ -6,7 +6,7 @@ import type SidecarPlugin from './main';
 export const recentlyRestoredSidecars = new Set<string>();
 
 /**
- * Creates a sidecar file for the given source file
+ * Creates a sidecar file for the given main file
  */
 export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile): Promise<void> {
 	// Prevent sidecar creation for files present at startup if revalidateOnStartup is false
@@ -35,7 +35,7 @@ export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile): 
 }
 
 /**
- * Deletes a sidecar file for the given source file
+ * Deletes a sidecar file for the given main file
  */
 export async function deleteSidecarForFile(plugin: SidecarPlugin, file: TFile): Promise<void> {
 	// Ignore delete events for sidecars just restored
@@ -69,15 +69,15 @@ export async function deleteSidecarForFile(plugin: SidecarPlugin, file: TFile): 
 }
 
 /**
- * Handles the renaming/moving of sidecar files when their source files are renamed/moved
+ * Handles the renaming/moving of sidecar files when their main files are renamed/moved
  */
 export async function handleSidecarRename(plugin: SidecarPlugin, file: TFile, oldPath: string, newPath: string): Promise<void> {
-	// If the renamed/moved file was a source file that HAD a sidecar at the OLD location
+	// If the renamed/moved file was a main file that HAD a sidecar at the OLD location
 	const oldSidecarPath = plugin.getSidecarPath(oldPath);
 	const oldSidecarFile = plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
 
 	if (oldSidecarFile instanceof TFile) {
-		// Source file was renamed/moved, so rename/move its sidecar too
+		// Main file was renamed/moved, so rename/move its sidecar too
 		const newSidecarPath = plugin.getSidecarPath(newPath);
 		try {
 			// Check if a file/folder already exists at the target newSidecarPath
@@ -167,17 +167,15 @@ export async function revalidateAllSidecars(plugin: SidecarPlugin): Promise<void
 		if (plugin.isSidecarFile(file.path)) {
 			const sourcePath = plugin.getSourcePathFromSidecar(file.path);
 			let shouldDelete = false;
-			let reason = "";
-
-			if (!sourcePath) {
+			let reason = "";			if (!sourcePath) {
 				shouldDelete = true;
-				reason = "Cannot determine source path";
+				reason = "Cannot determine main path";
 			} else if (!plugin.app.vault.getAbstractFileByPath(sourcePath)) {
 				shouldDelete = true;
-				reason = "Source file no longer exists";
+				reason = "Main file no longer exists";
 			} else if (!plugin.isMonitoredFile(sourcePath)) {
 				shouldDelete = true;
-				reason = "Source file is no longer monitored";
+				reason = "Main file is no longer monitored";
 			}
 
 			if (shouldDelete) {

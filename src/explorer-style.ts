@@ -248,17 +248,26 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 		.nav-file-title[data-path$='${fullRedirectExtension}'] {
 			display: none !important;
 		}
-		`;
-	} else if (plugin.settings.dimSidecarsInExplorer) {
+		`;	} else if (plugin.settings.dimSidecarsInExplorer) {
 		styleTextContent += `
 		.nav-file-title[data-path$='${fullSidecarExtension}'],
 		.nav-file-title[data-path$='${fullRedirectExtension}'] {
+			color: var(--text-faint) !important;
+		}
+		.nav-file-title[data-path$='${fullSidecarExtension}'] .tree-item-icon,
+		.nav-file-title[data-path$='${fullRedirectExtension}'] .tree-item-icon {
 			color: var(--text-faint) !important;
 		}
 		.nav-file-title[data-path$='${fullSidecarExtension}']:hover,
 		.nav-file-title[data-path$='${fullSidecarExtension}'].is-active,
 		.nav-file-title[data-path$='${fullRedirectExtension}']:hover,
 		.nav-file-title[data-path$='${fullRedirectExtension}'].is-active {
+			color: var(--text-muted) !important;
+		}
+		.nav-file-title[data-path$='${fullSidecarExtension}']:hover .tree-item-icon,
+		.nav-file-title[data-path$='${fullSidecarExtension}'].is-active .tree-item-icon,
+		.nav-file-title[data-path$='${fullRedirectExtension}']:hover .tree-item-icon,
+		.nav-file-title[data-path$='${fullRedirectExtension}'].is-active .tree-item-icon {
 			color: var(--text-muted) !important;
 		}
 		`;

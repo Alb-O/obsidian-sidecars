@@ -76,11 +76,12 @@ export default class SidecarPlugin extends Plugin {
 			},
 		});
 		new Notice('Sidecar Plugin loaded.');
-	}
-	private registerDirectEventHandlers() {
+	}	private registerDirectEventHandlers() {
+		console.log('Sidecar Plugin: Registering event handlers...');
 		this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
 		this.registerEvent(this.app.vault.on('delete', (file) => handleFileDelete(this, file)));
 		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => handleFileRename(this, file, oldPath)));
+		console.log('Sidecar Plugin: Event handlers registered.');
 	}
 
 	onunload() {
@@ -164,23 +165,21 @@ export default class SidecarPlugin extends Plugin {
 			if (this.isSidecarFile(file.path)) { // Uses the class method
 				const sourcePath = this.getSourcePathFromSidecar(file.path); // Uses the class method
 				let shouldDelete = false;
-				let reason = "";
-
-				if (!sourcePath) {
+				let reason = "";				if (!sourcePath) {
 					shouldDelete = true;
-					reason = "malformed name or unidentifiable source";
+					reason = "malformed name or unidentifiable main file";
 				} else {
 					const sourceFile = this.app.vault.getAbstractFileByPath(sourcePath);
 					if (!sourceFile) {
 						shouldDelete = true;
-						reason = "orphaned (source file missing)";
+						reason = "orphaned (main file missing)";
 					} else if (!(sourceFile instanceof TFile)) {
 						shouldDelete = true;
-						reason = "source is a folder, not a file";
+						reason = "main file is a folder, not a file";
 					} else {
 						if (!this.isMonitoredFile(sourcePath)) { // Uses the class method
 							shouldDelete = true;
-							reason = "source file no longer monitored";
+							reason = "main file no longer monitored";
 						}
 					}
 				}
