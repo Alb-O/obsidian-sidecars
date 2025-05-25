@@ -79,10 +79,11 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			if (el.getAttribute("draggable") === "false") {
 				el.removeAttribute("draggable");
 			}
-		}
-
-		// --- Handle redirect files ---
-		const fullRedirectExtension = '.' + plugin.settings.redirectFileSuffix + '.md';
+		}		// --- Handle redirect files ---
+		// Note: We style redirect files based on their filename pattern regardless of whether
+		// redirect file management is enabled. The management setting only controls creation.
+		const fullRedirectExtension = plugin.settings.redirectFileSuffix ? 
+			'.' + plugin.settings.redirectFileSuffix + '.md' : '.redirect.md';
 		const isRedirect = dataPath.endsWith(fullRedirectExtension);
 		if (isRedirect) {
 			if (plugin.settings.preventDraggingSidecars) {
@@ -222,11 +223,9 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		plugin.sidecarAppearanceObserver.observe(navContainer, {
 			childList: true,
 			subtree: true,
-			attributes: true,
-			attributeOldValue: true,
+			attributes: true, attributeOldValue: true,
 			attributeFilter: ["class", "data-path"], // Track both class and data-path changes
 		});
-
 		// Ensure initial styling is applied to all existing sidecar files
 		document.querySelectorAll(".nav-file-title").forEach((el) => {
 			if (el instanceof HTMLElement) processNavItem(el);

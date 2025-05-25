@@ -122,17 +122,39 @@ export function getSourcePathFromSidecarUtil(sidecarPath: string, settings: Side
 // --- redirect File Utilities ---
 
 /**
+ * Checks if redirect file management is enabled and properly configured.
+ * This is used for determining whether to create/manage redirect files.
+ * @param settings The plugin settings.
+ * @returns True if redirect file management is enabled and configured, false otherwise.
+ */
+export function isRedirectFileManagementEnabledUtil(settings: SidecarPluginSettings): boolean {
+	return Boolean(settings.enableRedirectFile) && 
+		   Boolean(settings.redirectFileSuffix) && 
+		   settings.redirectFileSuffix.trim() !== '';
+}
+
+/**
  * Checks if a given file path corresponds to a redirect file.
  * A redirect file is created when a monitored file is moved/renamed, indicating its new location.
  * @param filePath The path of the file to check.
  * @param settings The plugin settings.
  * @returns True if the file is a redirect file, false otherwise.
  */
+/**
+ * Checks if a given file path corresponds to a redirect file for STYLING purposes.
+ * This checks the file pattern regardless of whether redirect file management is enabled.
+ * @param filePath The path of the file to check.
+ * @param settings The plugin settings.
+ * @returns True if the file matches the redirect file pattern, false otherwise.
+ */
 export function isRedirectFileUtil(filePath: string, settings: SidecarPluginSettings): boolean {
-	if (!settings.enableRedirectFile || !settings.redirectFileSuffix || settings.redirectFileSuffix.trim() === '') {
+	// For styling purposes, check if file matches redirect pattern even if feature is disabled
+	if (!settings.redirectFileSuffix || settings.redirectFileSuffix.trim() === '') {
 		return false;
 	}
-	return filePath.endsWith('.' + settings.redirectFileSuffix.trim() + '.md');
+	
+	const expectedSuffix = '.' + settings.redirectFileSuffix.trim() + '.md';
+	return filePath.endsWith(expectedSuffix);
 }
 
 /**

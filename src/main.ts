@@ -7,7 +7,8 @@ import {
 	getSourcePathFromSidecarUtil,
 	isRedirectFileUtil,
 	getRedirectFilePathUtil,
-	getSourcePathFromRedirectFileUtil
+	getSourcePathFromRedirectFileUtil,
+	isRedirectFileManagementEnabledUtil
 } from './utils'; // Updated imports
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style';
@@ -26,20 +27,15 @@ export default class SidecarPlugin extends Plugin {
 	}
 	updateSidecarCss() {
 		updateSidecarCss(this);
-	}
-
-	async onload() {
+	}	async onload() {
 		await this.loadSettings();
 		this.isInitialRevalidating = this.settings.revalidateOnStartup;
 		this.hasFinishedInitialLoad = false;
 
 		this.addSettingTab(new SidecarSettingTab(this.app, this));
-
 		// Dev-utils rename/delete integration removed due to conflicts; using manual handlers exclusively
 		console.warn('Sidecar Plugin: using manual rename/delete handlers only.');
-
 		this.registerDirectEventHandlers();
-		this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
 		this.app.workspace.onLayoutReady(async () => {
 			// Delay DOM manipulations to give Obsidian's UI more time to fully render after a full app reload
 			setTimeout(() => {
@@ -79,11 +75,10 @@ export default class SidecarPlugin extends Plugin {
 				this.cleanupRedirectFiles();
 			},
 		});
-
 		new Notice('Sidecar Plugin loaded.');
 	}
-
 	private registerDirectEventHandlers() {
+		this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
 		this.registerEvent(this.app.vault.on('delete', (file) => handleFileDelete(this, file)));
 		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => handleFileRename(this, file, oldPath)));
 	}
@@ -110,7 +105,7 @@ export default class SidecarPlugin extends Plugin {
 		if (typeof this.settings.redirectFileSuffix === 'undefined') {
 			this.settings.redirectFileSuffix = DEFAULT_SETTINGS.redirectFileSuffix;
 		}
-	}	async saveSettings(refreshStyles: boolean = true) {
+	} async saveSettings(refreshStyles: boolean = true) {
 		await this.saveData(this.settings);
 		if (refreshStyles) {
 			this.updateSidecarCss();
@@ -238,8 +233,11 @@ export default class SidecarPlugin extends Plugin {
 	getRedirectFilePath(originalSourcePath: string): string {
 		return getRedirectFilePathUtil(originalSourcePath, this.settings);
 	}
-
 	getSourcePathFromRedirectFile(redirectFilePath: string): string | null {
 		return getSourcePathFromRedirectFileUtil(redirectFilePath, this.settings);
+	}
+
+	isRedirectFileManagementEnabled(): boolean {
+		return isRedirectFileManagementEnabledUtil(this.settings);
 	}
 }

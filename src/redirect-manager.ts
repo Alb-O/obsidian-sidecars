@@ -6,11 +6,11 @@ import type SidecarPlugin from './main';
  * Creates a redirect file when a monitored file is renamed/moved
  */
 export async function createRedirectFile(plugin: SidecarPlugin, oldPath: string, newPath: string): Promise<void> {
-	if (!plugin.settings.enableRedirectFile) {
+	if (!plugin.isRedirectFileManagementEnabled()) {
 		return;
 	}
 
-	const oldPathWasMonitoredSource = plugin.settings.enableRedirectFile &&
+	const oldPathWasMonitoredSource = plugin.isRedirectFileManagementEnabled() &&
 		plugin.isMonitoredFile(oldPath) &&
 		!plugin.isSidecarFile(oldPath) &&
 		!plugin.isRedirectFile(oldPath);
@@ -43,7 +43,7 @@ export async function createRedirectFile(plugin: SidecarPlugin, oldPath: string,
  * Cleans up redirect files when a file is moved back to its original location
  */
 export async function cleanupRedirectFile(plugin: SidecarPlugin, newPath: string): Promise<void> {
-	if (!plugin.settings.enableRedirectFile) {
+	if (!plugin.isRedirectFileManagementEnabled()) {
 		return;
 	}
 
@@ -66,8 +66,8 @@ export async function cleanupRedirectFile(plugin: SidecarPlugin, newPath: string
  * Batch cleans up all redirect files in the vault
  */
 export async function cleanupAllRedirectFiles(plugin: SidecarPlugin): Promise<void> {
-	if (!plugin.settings.enableRedirectFile || !plugin.settings.redirectFileSuffix?.trim()) {
-		new Notice('Redirect file feature is not enabled or suffix is not configured. Nothing to clean.');
+	if (!plugin.isRedirectFileManagementEnabled()) {
+		new Notice('Redirect file management is not enabled or suffix is not configured. Nothing to clean.');
 		return;
 	}
 

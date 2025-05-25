@@ -412,26 +412,23 @@ export class SidecarSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-
 		// --- Redirect File Settings ---
 		new Setting(containerEl).setName('Redirect Files').setHeading();
-
+		
 		new Setting(containerEl)
-			.setName('Enable redirect files')
-			.setDesc('This is setting is only relevant to advanced user integrating sidecars with other tools. When a monitored file is moved or renamed, create an extra redirect file in its original location. This file stores information about where the original file was moved to, which can be useful for other tools or scripts.')
+			.setName('Manage redirect files')
+			.setDesc('When a monitored file is moved or renamed, create a redirect file in its original location pointing to the new location. This is useful for advanced integrations with external tools. Note: Redirect files will be styled with extension tags regardless of this setting.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableRedirectFile)
 				.onChange(async (value) => {
 					this.plugin.settings.enableRedirectFile = value;
 					await this.plugin.saveSettings();
-					this.display(); // Refresh settings tab to show/hide suffix input
 				}));
 
-		if (this.plugin.settings.enableRedirectFile) {
-			new Setting(containerEl)
-				.setName('Redirect file suffix')
-				.setDesc('The suffix for redirect files. Do not include periods or the .md extension.')
-				.addText(text => {
+		new Setting(containerEl)
+			.setName('Redirect file suffix')
+			.setDesc('The suffix for redirect files. Do not include periods or the .md extension. This affects both file creation and styling recognition.')
+			.addText(text => {
 					text.setPlaceholder('redirect')
 						.setValue(this.plugin.settings.redirectFileSuffix);
 
@@ -450,9 +447,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 							text.inputEl.addClass('sidecar-setting-error');
 							new Notice('Suffix cannot be empty.', 3000);
 						}
-					};
-
-					text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
+					};					text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
 					text.inputEl.onkeydown = (event) => { // Save on Enter
 						if (event.key === 'Enter') {
 							event.preventDefault();
@@ -460,7 +455,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 						}
 					};
 				});
-		}
-		// --- End Leave Redirect File Settings ---
+		// --- End Redirect File Settings ---
 	}
 }

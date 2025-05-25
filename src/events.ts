@@ -6,6 +6,13 @@ import { createRedirectFile, cleanupRedirectFile } from './redirect-manager';
 export async function handleFileCreate(plugin: SidecarPlugin, file: TAbstractFile): Promise<void> {
 	if (file instanceof TFile) {
 		await createSidecarForFile(plugin, file);
+
+		if (plugin.isRedirectFile(file.path) || plugin.isSidecarFile(file.path)) {
+			// Use a small delay to ensure the file explorer DOM has been updated
+			setTimeout(() => {
+				plugin.updateSidecarFileAppearance();
+			}, 20);
+		}
 	}
 }
 
