@@ -322,7 +322,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Show .md in sidecar extension')
 			.setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showMdInSidecarTag ?? false)				.onChange(async (value) => {
+				.setValue(this.plugin.settings.showMdInSidecarTag ?? false).onChange(async (value) => {
 					this.plugin.settings.showMdInSidecarTag = value;
 					await this.plugin.saveSettings(); // saveSettings will refresh styles automatically
 				}));
@@ -412,12 +412,12 @@ export class SidecarSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-		// --- Redirect File Settings ---
-		new Setting(containerEl).setName('Redirect Files').setHeading();
-		
+
+		new Setting(containerEl).setName('Redirect files').setHeading();
+
 		new Setting(containerEl)
 			.setName('Manage redirect files')
-			.setDesc('When a monitored file is moved or renamed, create a redirect file in its original location pointing to the new location. This is useful for advanced integrations with external tools. Note: Redirect files will be styled with extension tags regardless of this setting.')
+			.setDesc('When a monitored file is moved or renamed, create a redirect file in its original location pointing to the new location. This is useful for advanced integrations with external tools.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.enableRedirectFile)
 				.onChange(async (value) => {
@@ -429,32 +429,31 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Redirect file suffix')
 			.setDesc('The suffix for redirect files. Do not include periods or the .md extension. This affects both file creation and styling recognition.')
 			.addText(text => {
-					text.setPlaceholder('redirect')
-						.setValue(this.plugin.settings.redirectFileSuffix);
+				text.setPlaceholder('redirect')
+					.setValue(this.plugin.settings.redirectFileSuffix);
 
-					const validateAndSaveRedirectSuffix = async () => {
-						const currentValue = text.inputEl.value.trim();
-						if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
-							if (this.plugin.settings.redirectFileSuffix !== currentValue) {
-								this.plugin.settings.redirectFileSuffix = currentValue;
-								await this.plugin.saveSettings();
-							}
-							text.inputEl.removeClass('sidecar-setting-error');
-						} else if (currentValue.length > 0) { // Only show error if not empty but invalid
-							text.inputEl.addClass('sidecar-setting-error');
-							new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
-						} else { // Is empty
-							text.inputEl.addClass('sidecar-setting-error');
-							new Notice('Suffix cannot be empty.', 3000);
+				const validateAndSaveRedirectSuffix = async () => {
+					const currentValue = text.inputEl.value.trim();
+					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
+						if (this.plugin.settings.redirectFileSuffix !== currentValue) {
+							this.plugin.settings.redirectFileSuffix = currentValue;
+							await this.plugin.saveSettings();
 						}
-					};					text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
-					text.inputEl.onkeydown = (event) => { // Save on Enter
-						if (event.key === 'Enter') {
-							event.preventDefault();
-							validateAndSaveRedirectSuffix();
-						}
-					};
-				});
-		// --- End Redirect File Settings ---
+						text.inputEl.removeClass('sidecar-setting-error');
+					} else if (currentValue.length > 0) { // Only show error if not empty but invalid
+						text.inputEl.addClass('sidecar-setting-error');
+						new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
+					} else { // Is empty
+						text.inputEl.addClass('sidecar-setting-error');
+						new Notice('Suffix cannot be empty.', 3000);
+					}
+				}; text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
+				text.inputEl.onkeydown = (event) => { // Save on Enter
+					if (event.key === 'Enter') {
+						event.preventDefault();
+						validateAndSaveRedirectSuffix();
+					}
+				};
+			});
 	}
 }
