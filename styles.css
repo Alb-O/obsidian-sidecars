@@ -83,6 +83,15 @@
 }
 
 .sidecar-explorer-style-settings>summary {
-	padding-bottom: 0.75em;
+	margin-bottom: 11.25px;
 	font-weight: var(--font-semibold);
+}
+
+.sidecar-redirect-files-settings>summary {
+	font-weight: var(--font-semibold);
+	padding-top: 11.25px;
+}
+
+.sidecar-redirect-files-settings>.setting-item-description {
+	margin-bottom: 11.25px;
 }

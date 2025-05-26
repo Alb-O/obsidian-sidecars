@@ -103,6 +103,15 @@ export function isMonitoredFileUtil(filePath: string, settings: SidecarPluginSet
 	return extension ? settings.monitoredExtensions.map(ext => ext.toLowerCase().replace(/^\./, '')).includes(extension) : false;
 }
 
+/**
+ * Converts a path to a POSIX-compliant path (uses forward slashes).
+ * @param path The path to convert.
+ * @returns The POSIX-compliant path.
+ */
+export function toPosixPath(path: string): string {
+    return path.replace(/\\/g, "/");
+}
+
 export function getSidecarPathUtil(sourcePath: string, settings: SidecarPluginSettings): string {
 	return sourcePath + '.' + settings.sidecarSuffix + '.md';
 }
@@ -115,75 +124,6 @@ export function getSourcePathFromSidecarUtil(sidecarPath: string, settings: Side
 	const fullSuffix = '.' + settings.sidecarSuffix + '.md';
 	if (sidecarPath.endsWith(fullSuffix)) {
 		return sidecarPath.substring(0, sidecarPath.length - fullSuffix.length);
-	}
-	return null;
-}
-
-// --- redirect File Utilities ---
-
-/**
- * Checks if redirect file management is enabled and properly configured.
- * This is used for determining whether to create/manage redirect files.
- * @param settings The plugin settings.
- * @returns True if redirect file management is enabled and configured, false otherwise.
- */
-export function isRedirectFileManagementEnabledUtil(settings: SidecarPluginSettings): boolean {
-	return Boolean(settings.enableRedirectFile) && 
-		   Boolean(settings.redirectFileSuffix) && 
-		   settings.redirectFileSuffix.trim() !== '';
-}
-
-/**
- * Checks if a given file path corresponds to a redirect file.
- * A redirect file is created when a monitored file is moved/renamed, indicating its new location.
- * @param filePath The path of the file to check.
- * @param settings The plugin settings.
- * @returns True if the file is a redirect file, false otherwise.
- */
-/**
- * Checks if a given file path corresponds to a redirect file for STYLING purposes.
- * This checks the file pattern regardless of whether redirect file management is enabled.
- * @param filePath The path of the file to check.
- * @param settings The plugin settings.
- * @returns True if the file matches the redirect file pattern, false otherwise.
- */
-export function isRedirectFileUtil(filePath: string, settings: SidecarPluginSettings): boolean {
-	// For styling purposes, check if file matches redirect pattern even if feature is disabled
-	if (!settings.redirectFileSuffix || settings.redirectFileSuffix.trim() === '') {
-		return false;
-	}
-	
-	const expectedSuffix = '.' + settings.redirectFileSuffix.trim() + '.md';
-	return filePath.endsWith(expectedSuffix);
-}
-
-/**
- * Generates the path for a redirect file given the original path of the main file.
- * The redirect file is placed in the same directory as the original main file, with
- * the original full name followed by the redirect suffix and .md extension.
- * E.g., "folder/main.ext" -> "folder/main.ext.redirect.md"
- * @param originalSourcePath The original path of the main file that was moved/renamed.
- * @param settings The plugin settings.
- * @returns The path for the redirect file.
- */
-export function getRedirectFilePathUtil(originalSourcePath: string, settings: SidecarPluginSettings): string {
-	return originalSourcePath + '.' + settings.redirectFileSuffix.trim() + '.md';
-}
-
-/**
- * Extracts the original main file path from a redirect file's path.
- * E.g., "folder/main.ext.redirect.md" -> "folder/main.ext"
- * @param redirectFilePath The path of the redirect file.
- * @param settings The plugin settings.
- * @returns The original main file path, or null if the path is not a valid redirect file path.
- */
-export function getSourcePathFromRedirectFileUtil(redirectFilePath: string, settings: SidecarPluginSettings): string | null {
-	if (!settings.enableRedirectFile || !settings.redirectFileSuffix || settings.redirectFileSuffix.trim() === '') {
-		return null;
-	}
-	const fullSuffix = '.' + settings.redirectFileSuffix.trim() + '.md';
-	if (redirectFilePath.endsWith(fullSuffix)) {
-		return redirectFilePath.substring(0, redirectFilePath.length - fullSuffix.length);
 	}
 	return null;
 }

@@ -22,6 +22,7 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
+		"chokidar": "^4.0.3",
 		"obsidian-dev-utils": "^26.28.0"
 	}
 }

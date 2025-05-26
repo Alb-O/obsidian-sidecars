@@ -1,47 +1,48 @@
-import { Notice, Plugin, TFile } from 'obsidian';
+import { Notice, Plugin, TFile, TAbstractFile, FileSystemAdapter, normalizePath } from 'obsidian';
 import { SidecarSettingTab } from './settings';
 import {
 	isMonitoredFileUtil,
 	getSidecarPathUtil,
 	isSidecarFileUtil,
 	getSourcePathFromSidecarUtil,
-	isRedirectFileUtil,
-	getRedirectFilePathUtil,
-	getSourcePathFromRedirectFileUtil,
-	isRedirectFileManagementEnabledUtil
-} from './utils'; // Updated imports
+} from './utils';
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style';
-import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
-import { cleanupAllRedirectFiles } from './redirect-manager';
+import { PathInoMapService } from './external-rename/PathInoMapService';
+import { ExternalFileHandler } from './external-rename/ExternalFileHandler';
 
 export default class SidecarPlugin extends Plugin {
-	sidecarAppearanceObserver?: MutationObserver; // Renamed from sidecarDraggableObserver
-
+	sidecarAppearanceObserver?: MutationObserver;
 	settings: SidecarPluginSettings;
-	public isInitialRevalidating = false; // Flag to manage initial revalidation state
-	public hasFinishedInitialLoad = false; // True after initial vault load
+	fileSystemAdapter!: FileSystemAdapter;
+	pathInoMapService!: PathInoMapService;
+	externalFileHandler!: ExternalFileHandler;
+
+	public isInitialRevalidating = false;
+	public hasFinishedInitialLoad = false;
 
 	updateSidecarFileAppearance() {
 		updateSidecarFileAppearance(this);
 	}
 	updateSidecarCss() {
 		updateSidecarCss(this);
-	}	async onload() {
+	}
+
+	async onload() {
 		await this.loadSettings();
 		this.isInitialRevalidating = this.settings.revalidateOnStartup;
 		this.hasFinishedInitialLoad = false;
 
 		this.addSettingTab(new SidecarSettingTab(this.app, this));
-		// Dev-utils rename/delete integration removed due to conflicts; using manual handlers exclusively
-		console.warn('Sidecar Plugin: using manual rename/delete handlers only.');
-		this.registerDirectEventHandlers();
+
+		this.pathInoMapService = new PathInoMapService();
+		await this.pathInoMapService.init(this.app);
+
 		this.app.workspace.onLayoutReady(async () => {
-			// Delay DOM manipulations to give Obsidian's UI more time to fully render after a full app reload
 			setTimeout(() => {
 				this.updateSidecarCss();
 				this.updateSidecarFileAppearance();
-			}, 200);// Increased delay to 200ms for more reliable tag rendering
+			}, 200);
 
 			if (this.settings.revalidateOnStartup) {
 				this.isInitialRevalidating = true;
@@ -55,8 +56,14 @@ export default class SidecarPlugin extends Plugin {
 				}
 			} else {
 				this.hasFinishedInitialLoad = true;
-				// Ensure appearance is updated even if revalidation is off
-				// (it's already called above, but good to be explicit if logic changes)
+			}
+
+			if (this.app.vault.adapter instanceof FileSystemAdapter) {
+				this.fileSystemAdapter = this.app.vault.adapter;
+				this.externalFileHandler = new ExternalFileHandler(this, this.pathInoMapService, this.fileSystemAdapter);
+				await this.externalFileHandler.init();
+			} else {
+				new Notice("Sidecar Plugin: FileSystemAdapter not available. External file move/rename detection will not work.");
 			}
 		});
 
@@ -67,55 +74,69 @@ export default class SidecarPlugin extends Plugin {
 				this.revalidateSidecars();
 			},
 		});
-
-		this.addCommand({
-			id: 'cleanup-redirect-files',
-			name: 'Cleanup all redirect files',
-			callback: () => {
-				this.cleanupRedirectFiles();
-			},
-		});
 		new Notice('Sidecar Plugin loaded.');
-	}	private registerDirectEventHandlers() {
-		console.log('Sidecar Plugin: Registering event handlers...');
-		this.registerEvent(this.app.vault.on('create', (file) => handleFileCreate(this, file)));
-		this.registerEvent(this.app.vault.on('delete', (file) => handleFileDelete(this, file)));
-		this.registerEvent(this.app.vault.on('rename', (file, oldPath) => handleFileRename(this, file, oldPath)));
-		console.log('Sidecar Plugin: Event handlers registered.');
 	}
 
 	onunload() {
-		if (this.sidecarAppearanceObserver) { // Changed from sidecarDraggableObserver
+		if (this.sidecarAppearanceObserver) {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
+		}
+		if (this.externalFileHandler) {
+			this.externalFileHandler.cleanup();
+		}
+		if (this.pathInoMapService) {
+			this.pathInoMapService.close();
 		}
 		new Notice('Sidecar Plugin unloaded.');
 	}
 
 	async loadSettings() {
-		// Load user settings, using defaults only for unspecified properties
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		// Ensure revalidateOnStartup has a default value if it's missing from saved data (for upgrades)
 		if (typeof this.settings.revalidateOnStartup === 'undefined') {
 			this.settings.revalidateOnStartup = DEFAULT_SETTINGS.revalidateOnStartup;
-		}
-		// Ensure new "redirect file" settings have defaults if missing (for upgrades)
-		if (typeof this.settings.enableRedirectFile === 'undefined') {
-			this.settings.enableRedirectFile = DEFAULT_SETTINGS.enableRedirectFile;
 		}
 		if (typeof this.settings.redirectFileSuffix === 'undefined') {
 			this.settings.redirectFileSuffix = DEFAULT_SETTINGS.redirectFileSuffix;
 		}
-	} async saveSettings(refreshStyles: boolean = true) {
-		await this.saveData(this.settings);
+	}
+
+	async saveSettings(refreshStyles: boolean = true) {
+		await this.saveData(this.settings); // this.settings now has the new values and they are saved.
+
+		// Ensure externalFileHandler instance exists if it's needed and wasn't created during onload
+		if (this.settings.enableExternalRenameDetection && !this.externalFileHandler && this.app.vault.adapter instanceof FileSystemAdapter) {
+			if (!this.pathInoMapService) { // Should always exist, but good to be defensive
+				this.pathInoMapService = new PathInoMapService();
+				await this.pathInoMapService.init(this.app);
+				console.log('Sidecar Plugin: PathInoMapService initialized in saveSettings as it was missing.');
+			}
+			this.fileSystemAdapter = this.app.vault.adapter;
+			this.externalFileHandler = new ExternalFileHandler(this, this.pathInoMapService, this.fileSystemAdapter);
+			console.log('Sidecar Plugin: ExternalFileHandler instance created in saveSettings.');
+		}
+
+		if (this.externalFileHandler) {
+			if (this.settings.enableExternalRenameDetection) {
+				console.log('Sidecar Plugin: Setting change: External rename detection is now enabled. Initializing/Re-initializing ExternalFileHandler.');
+				await this.externalFileHandler.init();
+				if (this.externalFileHandler.isWatcherActive()) { // Check if the watcher was successfully initialized
+					new Notice('External rename watcher active.');
+				}
+			} else {
+				console.log('Sidecar Plugin: Setting change: External rename detection is now disabled. Cleaning up ExternalFileHandler.');
+				this.externalFileHandler.cleanup();
+			}
+		} else if (this.settings.enableExternalRenameDetection) {
+			// This case means externalFileHandler couldn't be created (e.g., adapter still not ready)
+			console.warn('Sidecar Plugin: External rename detection is enabled, but ExternalFileHandler could not be initialized/created (FileSystemAdapter might not be ready).');
+			new Notice("Sidecar: External rename detection enabled, but couldn't start. FileSystemAdapter might not be ready. Try restarting Obsidian or check console.");
+		}
+
 		if (refreshStyles) {
 			this.updateSidecarCss();
 			this.updateSidecarFileAppearance();
 		}
-	}
-
-	async cleanupRedirectFiles() {
-		await cleanupAllRedirectFiles(this);
 	}
 
 	async revalidateSidecars() {
@@ -128,10 +149,9 @@ export default class SidecarPlugin extends Plugin {
 		const allFiles = this.app.vault.getFiles();
 		const allFilePaths = new Set(allFiles.map(f => f.path));
 
-		// Phase 1: Ensure monitored files have sidecars
 		for (const file of allFiles) {
-			const isMonitored = this.isMonitoredFile(file.path); // Uses the class method
-			const sidecarPath = this.getSidecarPath(file.path); // Uses the class method
+			const isMonitored = this.isMonitoredFile(file.path);
+			const sidecarPath = this.getSidecarPath(file.path);
 			const initialSidecarExists = allFilePaths.has(sidecarPath);
 
 			if (isMonitored) {
@@ -158,14 +178,14 @@ export default class SidecarPlugin extends Plugin {
 			}
 		}
 
-		// Phase 2: Clean up orphan or invalid sidecars
 		const currentFilesAfterCreation = this.app.vault.getFiles();
 
 		for (const file of currentFilesAfterCreation) {
-			if (this.isSidecarFile(file.path)) { // Uses the class method
-				const sourcePath = this.getSourcePathFromSidecar(file.path); // Uses the class method
+			if (this.isSidecarFile(file.path)) {
+				const sourcePath = this.getSourcePathFromSidecar(file.path);
 				let shouldDelete = false;
-				let reason = "";				if (!sourcePath) {
+				let reason = "";
+				if (!sourcePath) {
 					shouldDelete = true;
 					reason = "malformed name or unidentifiable main file";
 				} else {
@@ -177,7 +197,7 @@ export default class SidecarPlugin extends Plugin {
 						shouldDelete = true;
 						reason = "main file is a folder, not a file";
 					} else {
-						if (!this.isMonitoredFile(sourcePath)) { // Uses the class method
+						if (!this.isMonitoredFile(sourcePath)) {
 							shouldDelete = true;
 							reason = "main file no longer monitored";
 						}
@@ -203,13 +223,9 @@ export default class SidecarPlugin extends Plugin {
 		new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 	}
 
-	// --- Utility Method Wrappers for Plugin Class ---
-	// These methods now correctly call the imported utility functions,
-	// passing the plugin's settings and providing the necessary context.
-
 	isMonitoredFile(filePath: string): boolean {
 		return isMonitoredFileUtil(filePath, this.settings, (fp) => {
-			return this.isSidecarFile(fp) || this.isRedirectFile(fp);
+			return this.isSidecarFile(fp);
 		});
 	}
 
@@ -223,20 +239,5 @@ export default class SidecarPlugin extends Plugin {
 
 	getSourcePathFromSidecar(sidecarPath: string): string | null {
 		return getSourcePathFromSidecarUtil(sidecarPath, this.settings);
-	}
-
-	isRedirectFile(filePath: string): boolean {
-		return isRedirectFileUtil(filePath, this.settings);
-	}
-
-	getRedirectFilePath(originalSourcePath: string): string {
-		return getRedirectFilePathUtil(originalSourcePath, this.settings);
-	}
-	getSourcePathFromRedirectFile(redirectFilePath: string): string | null {
-		return getSourcePathFromRedirectFileUtil(redirectFilePath, this.settings);
-	}
-
-	isRedirectFileManagementEnabled(): boolean {
-		return isRedirectFileManagementEnabledUtil(this.settings);
 	}
 }

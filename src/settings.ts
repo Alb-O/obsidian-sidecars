@@ -15,8 +15,7 @@ export interface SidecarPluginSettings {
 	preventDraggingSidecars?: boolean;
 	colorSidecarExtension?: boolean;
 	hideMainExtensionInExplorer?: boolean;
-	showMdInSidecarTag?: boolean;	// New "Leave Redirect" File Feature
-	enableRedirectFile: boolean;
+	showMdInSidecarTag?: boolean;
 	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer?: boolean;
 	enableExternalRenameDetection: boolean;
@@ -36,8 +35,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	preventDraggingSidecars: true,
 	colorSidecarExtension: true,
 	hideMainExtensionInExplorer: false,
-	showMdInSidecarTag: false,	// New "Leave Redirect" File Feature
-	enableRedirectFile: false,
+	showMdInSidecarTag: false,
 	redirectFileSuffix: 'redirect',
 	hideRedirectFilesInExplorer: true,
 	enableExternalRenameDetection: false,
@@ -58,7 +56,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Sidecar file suffix')
-			.setDesc('The suffix to use for sidecar files (e.g., side). Do not include periods or the .md extension. Reload the plugin or restart Obsidian after changing this.')
+			.setDesc('The suffix to use for sidecar files. Don\'t include periods or the .md extension.')
 			.addText(text => {
 				text.setPlaceholder('side')
 					.setValue(this.plugin.settings.sidecarSuffix);
@@ -122,7 +120,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Manage image files')
-			.setDesc('Include images in the list of file types to be monitored and managed:')
+			.setDesc('Create and manage sidecars for image formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
 				const ex = document.createElement('div');
@@ -155,7 +153,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Manage video files')
-			.setDesc('Include videos in the list of file types to be monitored and managed:')
+			.setDesc('Create and manage sidecars for video formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
 				const ex = document.createElement('div');
@@ -188,7 +186,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Manage audio files')
-			.setDesc('Include audio files in the list of file types to be monitored and managed:')
+			.setDesc('Create and manage sidecars for audio formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
 				const ex = document.createElement('div');
@@ -263,96 +261,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// --- Start File Explorer Style Collapsible ---
-		const explorerStyleDetails = document.createElement('details');
-		explorerStyleDetails.open = false; // collapsed by default
-		explorerStyleDetails.className = 'sidecar-explorer-style-settings setting-item';
-		const summary = document.createElement('summary');
-		summary.textContent = 'File Explorer styles';
-		explorerStyleDetails.appendChild(summary);
-		containerEl.appendChild(explorerStyleDetails);
-
-		// Dim sidecar files (INSIDE details)
-		new Setting(explorerStyleDetails)
-			.setName('Dim sidecar files')
-			.setDesc('Visually dim sidecar files in the File Explorer.')
-			.addToggle(toggle => {
-				toggle.setValue(this.plugin.settings.dimSidecarsInExplorer ?? false)
-					.onChange(async (value) => {
-						this.plugin.settings.dimSidecarsInExplorer = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
-		// Arrow indicators
-		new Setting(explorerStyleDetails)
-			.setName('Arrow indicators')
-			.setDesc((() => {
-				const frag = document.createDocumentFragment();
-				frag.append('Prepend ');
-				frag.appendChild(document.createElement('code')).textContent = '⮡';
-				frag.append(' to sidecar file names (visual only) and adjust padding to indicate the sidecar is a child of the main file.');
-				return frag;
-			})())
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.prependSidecarIndicator ?? false)
-				.onChange(async (value) => {
-					this.plugin.settings.prependSidecarIndicator = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Colored sidecar extension
-		new Setting(explorerStyleDetails)
-			.setName('Colored sidecar extension')
-			.setDesc((() => {
-				const frag = document.createDocumentFragment();
-				frag.append('Toggle coloring of the sidecar extension (e.g. ');
-				const codeTag = document.createElement('span');
-				codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example';
-				codeTag.textContent = this.plugin.settings.sidecarSuffix;
-				frag.appendChild(codeTag);
-				frag.append(') in the File Explorer.');
-				return frag;
-			})())
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.colorSidecarExtension ?? true)
-				.onChange(async (value) => {
-					this.plugin.settings.colorSidecarExtension = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Show .md in sidecar extension
-		new Setting(explorerStyleDetails)
-			.setName('Show .md in sidecar extension')
-			.setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showMdInSidecarTag ?? false).onChange(async (value) => {
-					this.plugin.settings.showMdInSidecarTag = value;
-					await this.plugin.saveSettings(); // saveSettings will refresh styles automatically
-				}));
-
-		// Hide main file extension
-		new Setting(explorerStyleDetails)
-			.setName('Hide main file extension')
-			.setDesc((() => {
-				const frag = document.createDocumentFragment();
-				frag.append('Hide the main file extension from sidecar items in the File Explorer, leaving only the ');
-				const codeTag = document.createElement('span');
-				codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example no-color';
-				codeTag.textContent = this.plugin.settings.sidecarSuffix;
-				frag.appendChild(codeTag);
-				frag.append(' suffix.');
-				return frag;
-			})())
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.hideMainExtensionInExplorer ?? false)
-				.onChange(async (value) => {
-					this.plugin.settings.hideMainExtensionInExplorer = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// --- End File Explorer Style Collapsible ---
-
 		new Setting(containerEl)
 			.setName('Management scope')
 			.setHeading()
@@ -417,21 +325,128 @@ export class SidecarSettingTab extends PluginSettingTab {
 				})
 			);
 
-		new Setting(containerEl).setName('Redirect files').setHeading();
+		new Setting(containerEl).setName('External rename detection').setHeading();
 
 		new Setting(containerEl)
-			.setName('Manage redirect files')
-			.setDesc('When a monitored file is moved or renamed, create a redirect file in its original location pointing to the new location. This is useful for advanced integrations with external tools.')
+			.setName('Enable external rename detection')
+			.setDesc('Detect and handle file renames/moves made outside of Obsidian. This helps keep sidecars synchronized when files are renamed externally.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableRedirectFile)
+				.setValue(this.plugin.settings.enableExternalRenameDetection)
 				.onChange(async (value) => {
-					this.plugin.settings.enableRedirectFile = value;
+					this.plugin.settings.enableExternalRenameDetection = value;
 					await this.plugin.saveSettings();
 				}));
 
 		new Setting(containerEl)
+			.setName('Polling interval (milliseconds)')
+			.setDesc('How often to check for file changes when using polling mode. Lower values = more responsive but higher CPU usage. Use 0 to disable polling and rely only on native file events.')
+			.addText(text => text
+				.setPlaceholder('2000')
+				.setValue(this.plugin.settings.externalRenamePollingInterval.toString())
+				.onChange(async (value) => {
+					const numValue = parseInt(value);
+					if (!isNaN(numValue) && numValue >= 0) {
+						this.plugin.settings.externalRenamePollingInterval = numValue;
+						await this.plugin.saveSettings();
+					}
+				}));
+
+		new Setting(containerEl).setName('File Explorer styles').setHeading();
+
+		// Dim sidecar files (INSIDE details)
+		new Setting(containerEl)
+			.setName('Dim sidecar files')
+			.setDesc('Visually dim sidecar files in the File Explorer.')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.dimSidecarsInExplorer ?? false)
+					.onChange(async (value) => {
+						this.plugin.settings.dimSidecarsInExplorer = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		// Arrow indicators
+		new Setting(containerEl)
+			.setName('Arrow indicators')
+			.setDesc((() => {
+				const frag = document.createDocumentFragment();
+				frag.append('Prepend ');
+				frag.appendChild(document.createElement('code')).textContent = '⮡';
+				frag.append(' to sidecar file names (visual only) and adjust padding to indicate the sidecar is a child of the main file.');
+				return frag;
+			})())
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.prependSidecarIndicator ?? false)
+				.onChange(async (value) => {
+					this.plugin.settings.prependSidecarIndicator = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Colored sidecar extension
+		new Setting(containerEl)
+			.setName('Colored sidecar extension')
+			.setDesc((() => {
+				const frag = document.createDocumentFragment();
+				frag.append('Toggle coloring of the sidecar extension (e.g. ');
+				const codeTag = document.createElement('span');
+				codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example';
+				codeTag.textContent = this.plugin.settings.sidecarSuffix;
+				frag.appendChild(codeTag);
+				frag.append(') in the File Explorer.');
+				return frag;
+			})())
+			.addToggle((toggle) => toggle
+				.setValue(this.plugin.settings.colorSidecarExtension ?? true)
+				.onChange(async (value) => {
+					this.plugin.settings.colorSidecarExtension = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Show .md in sidecar extension
+		new Setting(containerEl)
+			.setName('Show .md in sidecar extension')
+			.setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showMdInSidecarTag ?? false).onChange(async (value) => {
+					this.plugin.settings.showMdInSidecarTag = value;
+					await this.plugin.saveSettings(); // saveSettings will refresh styles automatically
+				}));
+
+		// Hide main file extension
+		new Setting(containerEl)
+			.setName('Hide main file extension')
+			.setDesc((() => {
+				const frag = document.createDocumentFragment();
+				frag.append('Hide the main file extension from sidecar items in the File Explorer, leaving only the ');
+				const codeTag = document.createElement('span');
+				codeTag.className = 'nav-file-tag sidecar-tag sidecar-tag-example no-color';
+				codeTag.textContent = this.plugin.settings.sidecarSuffix;
+				frag.appendChild(codeTag);
+				frag.append(' suffix.');
+				return frag;
+			})())
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.hideMainExtensionInExplorer ?? false)
+				.onChange(async (value) => {
+					this.plugin.settings.hideMainExtensionInExplorer = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl).setName('Redirect files (Blend Vault integration)').setHeading()
+			.setDesc((() => {
+				const frag = document.createDocumentFragment();
+				frag.appendText('Only relevant if you use the ');
+				const link = frag.createEl('span', { text: 'Blend Vault', cls: 'external-link' });
+				link.onclick = () => {
+					window.open('https://github.com/AMC-Albert/blend-vault', '_blank');
+				};
+				frag.appendText(' addon for Blender.');
+				return frag;
+			})());
+
+		new Setting(containerEl)
 			.setName('Redirect file suffix')
-			.setDesc('The suffix for redirect files. Do not include periods or the .md extension. This affects both file creation and styling recognition.')
+			.setDesc('The suffix for redirect files. Don\'t include periods or the .md extension.')
 			.addText(text => {
 				text.setPlaceholder('redirect')
 					.setValue(this.plugin.settings.redirectFileSuffix);
@@ -456,7 +471,8 @@ export class SidecarSettingTab extends PluginSettingTab {
 					if (event.key === 'Enter') {
 						event.preventDefault();
 						validateAndSaveRedirectSuffix();
-					}				};
+					}
+				};
 			});
 
 		new Setting(containerEl)
@@ -467,33 +483,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.hideRedirectFilesInExplorer = value;
 					await this.plugin.saveSettings();
-				}));
-
-		// External Rename Detection Section
-		containerEl.createEl('h3', { text: 'External Rename Detection' });
-
-		new Setting(containerEl)
-			.setName('Enable external rename detection')
-			.setDesc('Detect and handle file renames/moves made outside of Obsidian. This helps keep sidecars synchronized when files are renamed externally.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableExternalRenameDetection)
-				.onChange(async (value) => {
-					this.plugin.settings.enableExternalRenameDetection = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Polling interval (milliseconds)')
-			.setDesc('How often to check for file changes when using polling mode. Lower values = more responsive but higher CPU usage. Use 0 to disable polling and rely only on native file events.')
-			.addText(text => text
-				.setPlaceholder('2000')
-				.setValue(this.plugin.settings.externalRenamePollingInterval.toString())
-				.onChange(async (value) => {
-					const numValue = parseInt(value);
-					if (!isNaN(numValue) && numValue >= 0) {
-						this.plugin.settings.externalRenamePollingInterval = numValue;
-						await this.plugin.saveSettings();
-					}
 				}));
 	}
 }
