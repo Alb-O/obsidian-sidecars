@@ -15,10 +15,12 @@ export interface SidecarPluginSettings {
 	preventDraggingSidecars?: boolean;
 	colorSidecarExtension?: boolean;
 	hideMainExtensionInExplorer?: boolean;
-	showMdInSidecarTag?: boolean;
-	// New "Leave Redirect" File Feature
+	showMdInSidecarTag?: boolean;	// New "Leave Redirect" File Feature
 	enableRedirectFile: boolean;
 	redirectFileSuffix: string;
+	hideRedirectFilesInExplorer?: boolean;
+	enableExternalRenameDetection: boolean;
+	externalRenamePollingInterval: number;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -34,10 +36,12 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	preventDraggingSidecars: true,
 	colorSidecarExtension: true,
 	hideMainExtensionInExplorer: false,
-	showMdInSidecarTag: false,
-	// New "Leave Redirect" File Feature
+	showMdInSidecarTag: false,	// New "Leave Redirect" File Feature
 	enableRedirectFile: false,
 	redirectFileSuffix: 'redirect',
+	hideRedirectFilesInExplorer: true,
+	enableExternalRenameDetection: false,
+	externalRenamePollingInterval: 2000,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -452,8 +456,44 @@ export class SidecarSettingTab extends PluginSettingTab {
 					if (event.key === 'Enter') {
 						event.preventDefault();
 						validateAndSaveRedirectSuffix();
-					}
-				};
+					}				};
 			});
+
+		new Setting(containerEl)
+			.setName('Hide redirect files')
+			.setDesc('Completely hide redirect files in Obsidian\'s File Explorer.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.hideRedirectFilesInExplorer ?? false)
+				.onChange(async (value) => {
+					this.plugin.settings.hideRedirectFilesInExplorer = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// External Rename Detection Section
+		containerEl.createEl('h3', { text: 'External Rename Detection' });
+
+		new Setting(containerEl)
+			.setName('Enable external rename detection')
+			.setDesc('Detect and handle file renames/moves made outside of Obsidian. This helps keep sidecars synchronized when files are renamed externally.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableExternalRenameDetection)
+				.onChange(async (value) => {
+					this.plugin.settings.enableExternalRenameDetection = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Polling interval (milliseconds)')
+			.setDesc('How often to check for file changes when using polling mode. Lower values = more responsive but higher CPU usage. Use 0 to disable polling and rely only on native file events.')
+			.addText(text => text
+				.setPlaceholder('2000')
+				.setValue(this.plugin.settings.externalRenamePollingInterval.toString())
+				.onChange(async (value) => {
+					const numValue = parseInt(value);
+					if (!isNaN(numValue) && numValue >= 0) {
+						this.plugin.settings.externalRenamePollingInterval = numValue;
+						await this.plugin.saveSettings();
+					}
+				}));
 	}
 }

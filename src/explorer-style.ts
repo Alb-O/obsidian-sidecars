@@ -240,15 +240,24 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 
 	const fullSidecarExtension = "." + plugin.settings.sidecarSuffix + ".md";
 	const fullRedirectExtension = "." + plugin.settings.redirectFileSuffix + ".md";
-
 	// File visibility styles
 	if (plugin.settings.hideSidecarsInExplorer) {
 		styleTextContent += `
-		.nav-file-title[data-path$='${fullSidecarExtension}'],
+		.nav-file-title[data-path$='${fullSidecarExtension}'] {
+			display: none !important;
+		}
+		`;
+	}
+	
+	if (plugin.settings.hideRedirectFilesInExplorer) {
+		styleTextContent += `
 		.nav-file-title[data-path$='${fullRedirectExtension}'] {
 			display: none !important;
 		}
-		`;	} else if (plugin.settings.dimSidecarsInExplorer) {
+		`;
+	}
+	
+	if (plugin.settings.dimSidecarsInExplorer) {
 		styleTextContent += `
 		.nav-file-title[data-path$='${fullSidecarExtension}'],
 		.nav-file-title[data-path$='${fullRedirectExtension}'] {
