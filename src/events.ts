@@ -1,7 +1,6 @@
 import { TAbstractFile, TFile, Notice } from 'obsidian';
 import type SidecarPlugin from './main';
 import { createSidecarForFile, deleteSidecarForFile, handleSidecarRename } from './sidecar-manager';
-import { createRedirectFile, cleanupRedirectFile } from './redirect-manager';
 
 /**
  * Renames the main file when a sidecar file is renamed
@@ -91,34 +90,6 @@ async function handleExtensionReapplication(plugin: SidecarPlugin, file: TFile, 
 			}
 		}
 	}
-		// Check if the old path was a redirect file
-	if (plugin.isRedirectFile(oldPath)) {
-		const mainPath = plugin.getSourcePathFromRedirectFile(oldPath);
-		if (mainPath) {
-			const expectedNewRedirectPath = plugin.getRedirectFilePath(mainPath);
-					// If the new path doesn't have the redirect extension but should be a redirect
-			if (newPath !== expectedNewRedirectPath && !plugin.isRedirectFile(newPath)) {
-				// Get the new file name without extension to use as the base for the restored redirect
-				const newFileName = newPath.substring(newPath.lastIndexOf('/') + 1);
-				const newFileNameWithoutExt = newFileName.lastIndexOf('.') !== -1 
-					? newFileName.slice(0, newFileName.lastIndexOf('.')) 
-					: newFileName;
-				
-				// Build the new redirect path using the new base name
-				const directory = newPath.substring(0, newPath.lastIndexOf('/') + 1);
-				const newRedirectPath = directory + newFileNameWithoutExt + '.' + plugin.settings.redirectFileSuffix + '.md';
-				
-				try {
-					await plugin.app.vault.rename(file, newRedirectPath);
-					new Notice(`Redirect extension restored: ${newRedirectPath.split('/').pop()}`, 3000);
-					return true; // Indicates we handled the rename
-				} catch (error) {
-					console.error(`Sidecar Plugin: Error restoring redirect extension for ${newPath}:`, error);
-					new Notice(`Error restoring redirect extension for ${newFileName}`, 3000);
-				}
-			}
-		}
-	}
 	
 	return false; // No extension reapplication was needed/performed
 }
@@ -126,13 +97,6 @@ async function handleExtensionReapplication(plugin: SidecarPlugin, file: TFile, 
 export async function handleFileCreate(plugin: SidecarPlugin, file: TAbstractFile): Promise<void> {
 	if (file instanceof TFile) {
 		await createSidecarForFile(plugin, file);
-
-		if (plugin.isRedirectFile(file.path) || plugin.isSidecarFile(file.path)) {
-			// Use a small delay to ensure the file explorer DOM has been updated
-			setTimeout(() => {
-				plugin.updateSidecarFileAppearance();
-			}, 20);
-		}
 	}
 }
 
@@ -158,8 +122,6 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
 			return;
 		}
 
-		// Create redirect file if needed
-		await createRedirectFile(plugin, oldPath, newPath);		// Handle sidecar file renaming
 		if (plugin.isSidecarFile(newPath)) {
 			console.log(`Sidecar Plugin: Sidecar file was renamed from ${oldPath} to ${newPath}`);
 			
@@ -182,8 +144,5 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
 
 		// Update UI appearance
 		plugin.updateSidecarFileAppearance();
-
-		// Clean up redirect files if needed
-		await cleanupRedirectFile(plugin, newPath);
 	}
 }
