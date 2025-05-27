@@ -139,9 +139,6 @@ export default class SidecarPlugin extends Plugin {
 			if (this.settings.enableExternalRenameDetection) {
 				console.log('Sidecar Plugin: Setting change: External rename detection is now enabled. Initializing/Re-initializing ExternalFileHandler.');
 				await this.externalFileHandler.init();
-				if (this.externalFileHandler.isWatcherActive()) { // Check if the watcher was successfully initialized
-					new Notice('External rename watcher active.');
-				}
 			} else {
 				console.log('Sidecar Plugin: Setting change: External rename detection is now disabled. Cleaning up ExternalFileHandler.');
 				this.externalFileHandler.cleanup();
