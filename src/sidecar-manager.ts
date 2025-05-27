@@ -99,7 +99,7 @@ export async function handleSidecarRename(plugin: SidecarPlugin, file: TFile, ol
 		}
 	} else {
 		// Renamed file was not a sidecar, and didn't have one. If it's now monitored, create one.
-		if (plugin.isMonitoredFile(newPath) && !plugin.isSidecarFile(newPath) && !plugin.isRedirectFile(newPath)) {
+		if (plugin.isMonitoredFile(newPath) && !plugin.isSidecarFile(newPath)) {
 			const newSidecarPath = plugin.getSidecarPath(newPath);
 			const existingSidecar = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
 			if (!existingSidecar) {

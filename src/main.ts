@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style';
 import { PathInoMapService } from './external-rename/PathInoMapService';
 import { ExternalFileHandler } from './external-rename/ExternalFileHandler';
+import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
 
 export default class SidecarPlugin extends Plugin {
 	sidecarAppearanceObserver?: MutationObserver;
@@ -37,12 +38,30 @@ export default class SidecarPlugin extends Plugin {
 
 		this.pathInoMapService = new PathInoMapService();
 		await this.pathInoMapService.init(this.app);
-
 		this.app.workspace.onLayoutReady(async () => {
 			setTimeout(() => {
 				this.updateSidecarCss();
 				this.updateSidecarFileAppearance();
 			}, 200);
+
+			// Register core Obsidian vault event listeners for sidecar management
+			this.registerEvent(this.app.vault.on('create', (file) => {
+				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad) {
+					handleFileCreate(this, file);
+				}
+			}));
+
+			this.registerEvent(this.app.vault.on('delete', (file) => {
+				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad) {
+					handleFileDelete(this, file);
+				}
+			}));
+
+			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad) {
+					handleFileRename(this, file, oldPath);
+				}
+			}));
 
 			if (this.settings.revalidateOnStartup) {
 				this.isInitialRevalidating = true;
