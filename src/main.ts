@@ -1,5 +1,5 @@
 import { sidecarLog, sidecarWarn } from './settings';
-import { Notice, Plugin, TFile, FileSystemAdapter, FileView } from 'obsidian';
+import { Notice, Plugin, TFile, FileView } from 'obsidian';
 import { AddFiletypeModal } from './modals/AddFiletypeModal';
 import { OrphanSidecarModal } from './modals/OrphanSidecarModal';
 import { SidecarSettingTab } from './settings';
@@ -17,7 +17,6 @@ import { createSidecarForFile } from './sidecar-manager';
 export default class SidecarPlugin extends Plugin {
 	sidecarAppearanceObserver?: MutationObserver;
 	settings: SidecarPluginSettings;
-	fileSystemAdapter!: FileSystemAdapter;
 
 	public isInitialRevalidating = false;
 	public hasFinishedInitialLoad = false;
@@ -133,12 +132,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 				}
 			} else {
 				this.hasFinishedInitialLoad = true;
-			}
-
-			if (this.app.vault.adapter instanceof FileSystemAdapter) {
-				this.fileSystemAdapter = this.app.vault.adapter;
-			} else {
-				new Notice("Sidecar Plugin: FileSystemAdapter not available. External file move/rename detection will not work.");
 			}
 		});
 
