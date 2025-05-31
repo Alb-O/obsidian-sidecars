@@ -1,3 +1,4 @@
+import { sidecarLog, sidecarWarn } from './settings';
 import { Notice, Plugin, TFile, FileSystemAdapter, FileView } from 'obsidian';
 import { AddFiletypeModal } from './modals/AddFiletypeModal';
 import { OrphanSidecarModal } from './modals/OrphanSidecarModal';
@@ -205,7 +206,7 @@ async revalidateSidecars() {
 						allFilePaths.add(sidecarPath);
 						sidecarEnsuredThisIteration = true;
 					} else {
-						console.warn(`Sidecar Plugin: vault.create for ${sidecarPath} returned null/undefined. Sidecar might not have been created.`);
+						sidecarWarn(`Sidecar Plugin: vault.create for ${sidecarPath} returned null/undefined. Sidecar might not have been created.`);
 					}
 				} catch (error) {
 					console.error(`Sidecar Plugin: Error creating sidecar for ${file.path} at ${sidecarPath} during revalidation: `, error);
@@ -261,19 +262,19 @@ async revalidateSidecars() {
 						if (sidecarFileToDelete instanceof TFile) {
 							await this.app.vault.delete(sidecarFileToDelete);
 							deletedOrphanCount++;
-							console.log(`Sidecar Plugin: Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
+							sidecarLog(`Sidecar Plugin: Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
 						}
 					} catch (error) {
 						console.error(`Sidecar Plugin: Error deleting orphan sidecar ${orphanPath}: `, error);
 					}
 				}
-				console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
+				sidecarLog(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
 				new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 				resolve();
 			}).open();
 		});
 	} else {
-		console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
+		sidecarLog(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
 		new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 	}
 }

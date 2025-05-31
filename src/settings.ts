@@ -1,3 +1,16 @@
+// Logging utility for gating logs behind environment flag
+function detectDevelopment() {
+    try {
+        // @ts-ignore
+        return typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production';
+    } catch {
+        return false;
+    }
+}
+export const isDevelopment = detectDevelopment();
+export function sidecarLog(...args: any[]) { if (isDevelopment) console.log(...args); }
+export function sidecarWarn(...args: any[]) { if (isDevelopment) console.warn(...args); }
+
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import { ConfirmResetModal } from './modals/ConfirmResetModal';
 import { ConfirmDeleteAllSidecarsModal } from './modals/ConfirmDeleteAllSidecarsModal';
@@ -123,7 +136,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Revalidate sidecars')
 			.setDesc('Manually re-scan all files to create missing sidecars and remove orphaned or invalid ones. This can be useful after bulk file operations or if you suspect inconsistencies.')
 			.addButton(button => button
-				.setButtonText('Revalidate Now')
+				.setButtonText('Revalidate now')
 				.setCta()
 				.onClick(() => {
 					new Notice('Starting sidecar revalidation...');
@@ -137,8 +150,8 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setDesc('Create and manage sidecars for image formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
-				const ex = document.createElement('div');
-				ex.style.marginTop = '0.25em';
+			   const ex = document.createElement('div');
+			   ex.classList.add('sidecar-margin-top');
 				['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'].forEach((ext, i, arr) => {
 					const code = document.createElement('code');
 					code.textContent = ext;
@@ -170,8 +183,8 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setDesc('Create and manage sidecars for video formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
-				const ex = document.createElement('div');
-				ex.style.marginTop = '0.25em';
+			   const ex = document.createElement('div');
+			   ex.classList.add('sidecar-margin-top');
 				['mkv', 'mov', 'mp4', 'ogv', 'webm'].forEach((ext, i, arr) => {
 					const code = document.createElement('code');
 					code.textContent = ext;
@@ -203,8 +216,8 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setDesc('Create and manage sidecars for audio formats supported by Obsidian:')
 			.then(setting => {
 				const desc = setting.descEl;
-				const ex = document.createElement('div');
-				ex.style.marginTop = '0.25em';
+			   const ex = document.createElement('div');
+			   ex.classList.add('sidecar-margin-top');
 				['flac', 'm4a', 'mp3', 'ogg', 'wav', 'webm', '3gp'].forEach((ext, i, arr) => {
 					const code = document.createElement('code');
 					code.textContent = ext;

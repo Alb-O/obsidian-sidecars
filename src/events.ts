@@ -1,3 +1,4 @@
+import { sidecarWarn } from './settings';
 import { TAbstractFile, TFile, Notice } from 'obsidian';
 import type SidecarPlugin from './main';
 import { createSidecarForFile, deleteSidecarForFile, handleSidecarRename } from './sidecar-manager';
@@ -8,13 +9,13 @@ import { createSidecarForFile, deleteSidecarForFile, handleSidecarRename } from 
 async function renameSidecarMainFile(plugin: SidecarPlugin, oldSidecarPath: string, newSidecarPath: string): Promise<void> {
 	const oldMainPath = plugin.getSourcePathFromSidecar(oldSidecarPath);
 	if (!oldMainPath) {
-		console.warn(`Sidecar Plugin: Cannot determine main file path for old sidecar: ${oldSidecarPath}`);
+   sidecarWarn(`Sidecar Plugin: Cannot determine main file path for old sidecar: ${oldSidecarPath}`);
 		return;
 	}
 
 	const newMainPath = plugin.getSourcePathFromSidecar(newSidecarPath);
 	if (!newMainPath) {
-		console.warn(`Sidecar Plugin: Cannot determine main file path for new sidecar: ${newSidecarPath}`);
+   sidecarWarn(`Sidecar Plugin: Cannot determine main file path for new sidecar: ${newSidecarPath}`);
 		return;
 	}	// Check if the main file exists
 	const mainFile = plugin.app.vault.getAbstractFileByPath(oldMainPath);
@@ -26,7 +27,7 @@ async function renameSidecarMainFile(plugin: SidecarPlugin, oldSidecarPath: stri
 	// Check if target main path already exists
 	const existingTargetFile = plugin.app.vault.getAbstractFileByPath(newMainPath);
 	if (existingTargetFile) {
-		console.warn(`Sidecar Plugin: Target main path ${newMainPath} already exists, skipping rename`);
+   sidecarWarn(`Sidecar Plugin: Target main path ${newMainPath} already exists, skipping rename`);
 		new Notice(`Cannot rename main file: ${newMainPath.split('/').pop()} already exists`, 3000);
 		return;
 	}
@@ -122,7 +123,7 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
 				// This sidecar is now an orphan because its main file is gone (likely deleted separately)
 				// Or, the main file was renamed and this sidecar didn't get renamed with it (which this handler should prevent)
 				// For now, we'll log it. Revalidation would clean it up.
-				console.warn(`Sidecar Plugin: Renamed sidecar ${newPath} is an orphan. Main file ${mainPath} not found.`);
+			   sidecarWarn(`Sidecar Plugin: Renamed sidecar ${newPath} is an orphan. Main file ${mainPath} not found.`);
 			}
 			// If it is a sidecar, its appearance might need updating based on its new path/name
 			plugin.updateSidecarFileAppearance();

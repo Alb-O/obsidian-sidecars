@@ -2,10 +2,12 @@
 .nav-file-tag.sidecar-prepend-dot::before {
   content: ".";
 }
+
 /* Only color the text of the destructive reset button, not the background */
 .sidecar-reset-destructive-text {
   color: var(--color-red, #f44336) !important;
 }
+
 .multiple-text-component {
 	/* Not sure if there is a non-hardcoded way to align with other single-line text components */
 	min-width: 164.8px;
@@ -80,6 +82,11 @@
 .sidecar-tag-example {
 	margin-left: 0 !important;
 	/* Override existing margin */
+}
+
+/* Utility margin for settings extension lists */
+.sidecar-margin-top {
+  margin-top: 0.25em;
 }
 
 .sidecar-explorer-style-settings>summary {
