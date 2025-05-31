@@ -1,4 +1,5 @@
-import { Notice, Plugin, TFile, TAbstractFile, FileSystemAdapter, normalizePath } from 'obsidian';
+import { Notice, Plugin, TFile, FileSystemAdapter, FileView } from 'obsidian';
+import { AddFiletypeModal } from './AddFiletypeModal';
 import { OrphanSidecarModal } from './OrphanSidecarModal';
 import { SidecarSettingTab } from './settings';
 import {
@@ -12,6 +13,7 @@ import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style'
 import { PathInoMapService } from './external-rename/PathInoMapService';
 import { ExternalFileHandler } from './external-rename/ExternalFileHandler';
 import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
+import { createSidecarForFile } from './sidecar-manager';
 
 export default class SidecarPlugin extends Plugin {
 	sidecarAppearanceObserver?: MutationObserver;
@@ -39,6 +41,68 @@ export default class SidecarPlugin extends Plugin {
 
 		this.pathInoMapService = new PathInoMapService();
 		await this.pathInoMapService.init(this.app);
+
+		// Add context menu item to create sidecar for file
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				if (file instanceof TFile && !this.isSidecarFile(file.path)) {
+					menu.addItem((item) => {
+						item.setTitle('Create sidecar for file')
+							.setIcon('file-plus-2')
+							.setSection('action')
+							.onClick(async () => {
+								const ext = file.extension.toLowerCase();
+								const monitored = this.settings.monitoredExtensions.map(e => e.toLowerCase());
+								if (!monitored.includes(ext)) {
+									new AddFiletypeModal(this.app, ext, async (newExt) => {
+										if (!this.settings.monitoredExtensions.map(e => e.toLowerCase()).includes(newExt)) {
+											this.settings.monitoredExtensions.push(newExt);
+											await this.saveSettings();
+											new Notice(`Added .${newExt} to monitored file types.`);
+										}
+										// After adding, proceed to create sidecar
+										await handleCreateSidecarForFile.call(this, file);
+									}).open();
+								} else {
+									await handleCreateSidecarForFile.call(this, file);
+								}
+							});
+					});
+				}
+
+// Helper function to handle sidecar creation and opening
+async function handleCreateSidecarForFile(this: any, file: TFile) {
+	const sidecarPath = this.getSidecarPath(file.path);
+	const existing = this.app.vault.getAbstractFileByPath(sidecarPath);
+	if (!existing) {
+		await createSidecarForFile(this, file, true); // force creation from context menu
+	} else {
+	}
+	// Immediately try to get the sidecar file
+	const maybeFile = this.app.vault.getAbstractFileByPath(sidecarPath);
+	if (maybeFile instanceof TFile) {
+		// Try to find an already open leaf for this file
+		let foundLeaf = null;
+		this.app.workspace.iterateAllLeaves((leaf: import('obsidian').WorkspaceLeaf) => {
+			if (leaf.view instanceof FileView && leaf.view.file && leaf.view.file.path === maybeFile.path) {
+				foundLeaf = leaf;
+			}
+		});
+		if (foundLeaf) {
+			this.app.workspace.setActiveLeaf(foundLeaf, { focus: true });
+		} else {
+			const leaf = this.app.workspace.getLeaf(true);
+			await leaf.openFile(maybeFile);
+			this.app.workspace.setActiveLeaf(leaf, { focus: true });
+		}
+	} else {
+	}
+	if (existing) {
+		new Notice('Sidecar already exists for this file.');
+	}
+}
+			})
+		);
 		this.app.workspace.onLayoutReady(async () => {
 			setTimeout(() => {
 				this.updateSidecarCss();

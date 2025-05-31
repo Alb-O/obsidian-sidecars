@@ -8,7 +8,7 @@ export const recentlyRestoredSidecars = new Set<string>();
 /**
  * Creates a sidecar file for the given main file
  */
-export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile): Promise<void> {
+export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile, force = false): Promise<void> {
 	// Prevent sidecar creation for files present at startup if revalidateOnStartup is false
 	if (!plugin.hasFinishedInitialLoad && !plugin.settings.revalidateOnStartup) {
 		return;
@@ -17,9 +17,10 @@ export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile): 
 		return;
 	}
 
-	if (plugin.isMonitoredFile(file.path)) {
-		// Only create if autoCreateSidecars is enabled
-		if (plugin.settings.autoCreateSidecars ?? true) {
+	const monitored = plugin.isMonitoredFile(file.path);
+	if (monitored) {
+		// Only create if autoCreateSidecars is enabled, unless forced
+		if (force || (plugin.settings.autoCreateSidecars ?? true)) {
 			const sidecarPath = plugin.getSidecarPath(file.path);
 			if (!plugin.app.vault.getAbstractFileByPath(sidecarPath)) {
 				try {
