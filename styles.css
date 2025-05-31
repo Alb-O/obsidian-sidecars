@@ -1,3 +1,7 @@
+/* Prepend a period to all file extension tags when the class is applied */
+.nav-file-tag.sidecar-prepend-dot::before {
+  content: ".";
+}
 /* Only color the text of the destructive reset button, not the background */
 .sidecar-reset-destructive-text {
   color: var(--color-red, #f44336) !important;

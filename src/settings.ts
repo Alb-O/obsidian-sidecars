@@ -1,4 +1,3 @@
-
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import { ConfirmResetModal } from './modals/ConfirmResetModal';
 import { ConfirmDeleteAllSidecarsModal } from './modals/ConfirmDeleteAllSidecarsModal';
@@ -24,6 +23,7 @@ export interface SidecarPluginSettings {
 	enableExternalRenameDetection: boolean;
 	externalRenamePollingInterval: number;
 	autoCreateSidecars: boolean;
+	prependPeriodToExtTags: boolean;
 
 }
 
@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	enableExternalRenameDetection: false,
 	externalRenamePollingInterval: 2000,
 	autoCreateSidecars: true,
+	prependPeriodToExtTags: false,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -104,7 +105,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Automatically create new sidecars')
-			.setDesc('If enabled, new sidecars will be created automatically for monitored files. If disabled, only existing sidecars will be managed.')
+			.setDesc('If enabled, new sidecars will be created automatically for monitored files. If disabled, only existing sidecars will be managed. To manually create sidecars, use the context menu in the File Explorer.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoCreateSidecars)
 				.onChange(async (value) => {
@@ -450,6 +451,18 @@ export class SidecarSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		// Prepend period to all file extension tags
+		new Setting(containerEl)
+			.setName('Prepend period to extension tags')
+			.setDesc('Visually prepend a period to all file extension tags in the File Explorer (e.g. .PNG, .SIDE).')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.prependPeriodToExtTags)
+					.onChange(async (value) => {
+						this.plugin.settings.prependPeriodToExtTags = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		new Setting(containerEl).setName('Redirect files (Blend Vault integration)').setHeading()
 			.setDesc((() => {
 				const frag = document.createDocumentFragment();
@@ -458,7 +471,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 				link.onclick = () => {
 					window.open('https://github.com/AMC-Albert/blend-vault', '_blank');
 				};
-				frag.appendText(' addon for Blender.');
+				frag.appendText(' addon for Blender, or other tools that care about redirect files.');
 				return frag;
 			})());
 
