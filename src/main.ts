@@ -76,7 +76,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 	const existing = this.app.vault.getAbstractFileByPath(sidecarPath);
 	if (!existing) {
 		await createSidecarForFile(this, file, true); // force creation from context menu
-	} else {
 	}
 	// Immediately try to get the sidecar file
 	const maybeFile = this.app.vault.getAbstractFileByPath(sidecarPath);

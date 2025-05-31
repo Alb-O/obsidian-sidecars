@@ -26,6 +26,10 @@ export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile, f
 				try {
 					await plugin.app.vault.create(sidecarPath, '');
 					new Notice(`Created sidecar: ${sidecarPath.split('/').pop()}`);
+					// Refresh explorer styling after a short delay to allow DOM update
+					if (typeof plugin.updateSidecarFileAppearance === 'function') {
+						setTimeout(() => plugin.updateSidecarFileAppearance(), 50);
+					}
 				} catch (error) {
 					if (String(error).includes('File already exists')) {
 						return;
