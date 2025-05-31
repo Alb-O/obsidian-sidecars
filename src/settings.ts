@@ -1,11 +1,11 @@
 // Logging utility for gating logs behind environment flag
 function detectDevelopment() {
-    try {
-        // @ts-ignore
-        return typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production';
-    } catch {
-        return false;
-    }
+	try {
+		// @ts-ignore
+		return typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production';
+	} catch {
+		return false;
+	}
 }
 export const isDevelopment = detectDevelopment();
 export function sidecarLog(...args: any[]) { if (isDevelopment) console.log(...args); }
@@ -546,7 +546,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 							for (const file of files) {
 								if (this.plugin.isSidecarFile(file.path)) {
 									try {
-										await this.app.vault.delete(file);
+										await this.app.fileManager.trashFile(file);
 										deleted.push(file.path);
 									} catch (err) {
 										console.error(`Failed to delete sidecar file: ${file.path}`, err);

@@ -250,7 +250,7 @@ async revalidateSidecars() {
 					try {
 						const sidecarFileToDelete = this.app.vault.getAbstractFileByPath(orphanPath);
 						if (sidecarFileToDelete instanceof TFile) {
-							await this.app.vault.delete(sidecarFileToDelete);
+							await this.app.fileManager.trashFile(sidecarFileToDelete);
 							deletedOrphanCount++;
 							sidecarLog(`Sidecar Plugin: Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
 						}

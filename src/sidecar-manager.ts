@@ -67,7 +67,7 @@ export async function deleteSidecarForFile(plugin: SidecarPlugin, file: TFile): 
 
 	if (sidecarFile instanceof TFile) {
 		try {
-			await plugin.app.vault.delete(sidecarFile);
+			await plugin.app.fileManager.trashFile(sidecarFile);
 			new Notice(`Deleted sidecar: ${sidecarPath.split('/').pop()}`);
 		} catch (error) {
 			console.error(`Sidecar Plugin: Error deleting sidecar file ${sidecarPath}: `, error);
@@ -94,7 +94,7 @@ export async function handleSidecarRename(plugin: SidecarPlugin, file: TFile, ol
 			   // Only warn in dev, skip in production
 				new Notice(`Sidecar for ${getBasename(newPath)} already exists. Old sidecar not moved.`, 3000);
 				// Optionally, delete the oldSidecarFile here if it's considered redundant and we don't want duplicates.
-				// await plugin.app.vault.delete(oldSidecarFile);
+				// await plugin.app.fileManager.trashFile(oldSidecarFile);
 			} else if (!existingNewSidecar || existingNewSidecar.path === oldSidecarFile.path) {
 				// If it doesn't exist, or it exists but it *is* the old sidecar (i.e. just a name change in same folder)
 				await plugin.app.vault.rename(oldSidecarFile, newSidecarPath);
@@ -188,7 +188,7 @@ export async function revalidateAllSidecars(plugin: SidecarPlugin): Promise<void
 
 			if (shouldDelete) {
 				try {
-					await plugin.app.vault.delete(file);
+					await plugin.app.fileManager.trashFile(file);
 					deletedOrphanCount++;
 				   // Orphaned sidecar deleted
 				} catch (error) {
