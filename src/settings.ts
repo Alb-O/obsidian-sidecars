@@ -34,6 +34,7 @@ export interface SidecarPluginSettings {
 	hideRedirectFilesInExplorer: boolean;
 	autoCreateSidecars: boolean;
 	prependPeriodToExtTags: boolean;
+	hideSidecarBaseNameInExplorer?: boolean;
 
 }
 
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	hideRedirectFilesInExplorer: true,
 	autoCreateSidecars: true,
 	prependPeriodToExtTags: false,
+	hideSidecarBaseNameInExplorer: false,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -459,6 +461,21 @@ export class SidecarSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.prependPeriodToExtTags = value;
 						await this.plugin.saveSettings();
+					});
+			});
+
+		// Hide base name of sidecar files (extension only display)
+		new Setting(containerEl)
+			.setName('Hide base name of sidecar files')
+			.setDesc('If enabled, only the extension tags or arrow indicators will be visible for sidecar files. The base file name will be hidden (visual only).')
+			.addToggle(toggle => {
+				toggle.setValue(this.plugin.settings.hideSidecarBaseNameInExplorer ?? false)
+					.onChange(async (value) => {
+						this.plugin.settings.hideSidecarBaseNameInExplorer = value;
+						await this.plugin.saveSettings();
+						if (this.plugin.updateSidecarFileAppearance) {
+							this.plugin.updateSidecarFileAppearance();
+						}
 					});
 			});
 

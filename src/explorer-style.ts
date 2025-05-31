@@ -38,23 +38,24 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			if (innerContentEl) {
 				// Always clear existing content to ensure proper re-rendering
 				innerContentEl.textContent = "";
-
-				// Build display: add baseName only (no tags inside)
-				const sourceFilePath = dataPath.slice(
-					0,
-					-fullSidecarExtension.length
-				);
-				const sourceFileName = sourceFilePath.substring(
-					sourceFilePath.lastIndexOf("/") + 1
-				);
-				const dotIndex = sourceFileName.lastIndexOf(".");
-				const baseName =
-					dotIndex !== -1
-						? sourceFileName.slice(0, dotIndex)
-						: sourceFileName;
-
-				// Append base name as text
-				innerContentEl.appendChild(document.createTextNode(baseName));
+				// Only append base name if not hiding it
+				if (!plugin.settings.hideSidecarBaseNameInExplorer) {
+					// Build display: add baseName only (no tags inside)
+					const sourceFilePath = dataPath.slice(
+						0,
+						-fullSidecarExtension.length
+					);
+					const sourceFileName = sourceFilePath.substring(
+						sourceFilePath.lastIndexOf("/") + 1
+					);
+					const dotIndex = sourceFileName.lastIndexOf(".");
+					const baseName =
+						dotIndex !== -1
+							? sourceFileName.slice(0, dotIndex)
+							: sourceFileName;
+					// Append base name as text
+					innerContentEl.appendChild(document.createTextNode(baseName));
+				}
 			}
 
 			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
@@ -102,12 +103,15 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			}
 			if (innerContentEl) {
 				innerContentEl.textContent = "";
-				// Show the base name (without .redirect.md)
-				const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
-				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
-				const dotIndex = sourceFileName.lastIndexOf(".");
-				const baseName = dotIndex !== -1 ? sourceFileName.slice(0, dotIndex) : sourceFileName;
-				innerContentEl.appendChild(document.createTextNode(baseName));
+				// Only append base name if not hiding it
+				if (!plugin.settings.hideSidecarBaseNameInExplorer) {
+					// Show the base name (without .redirect.md)
+					const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
+					const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+					const dotIndex = sourceFileName.lastIndexOf(".");
+					const baseName = dotIndex !== -1 ? sourceFileName.slice(0, dotIndex) : sourceFileName;
+					innerContentEl.appendChild(document.createTextNode(baseName));
+				}
 			}
 			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
 			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
@@ -237,11 +241,11 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			attributes: true, attributeOldValue: true,
 			attributeFilter: ["class", "data-path"], // Track both class and data-path changes
 		});
-		// Ensure initial styling is applied to all existing sidecar files
-		document.querySelectorAll(".nav-file-title").forEach((el) => {
-			if (el instanceof HTMLElement) processNavItem(el);
-		});
 	}
+	// Always force a refresh of all nav-file-title elements when this function is called
+	document.querySelectorAll(".nav-file-title").forEach((el) => {
+		if (el instanceof HTMLElement) processNavItem(el);
+	});
 }
 
 export function updateSidecarCss(plugin: SidecarPlugin) {
