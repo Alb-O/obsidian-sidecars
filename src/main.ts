@@ -149,7 +149,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 				this.revalidateSidecars();
 			},
 		});
-		new Notice('Sidecar Plugin loaded.');
 	}
 
 	onunload() {
@@ -157,7 +156,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
 		}
-		new Notice('Sidecar Plugin unloaded.');
 	}
 
 	async loadSettings() {
@@ -180,7 +178,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 	}
 
 async revalidateSidecars() {
-	new Notice(`Starting sidecar revalidation...`, 3000);
 
 	let newlyCreatedSidecarCount = 0;
 	let countMonitoredFilesWithSidecars = 0;
