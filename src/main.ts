@@ -1,6 +1,6 @@
 import { Notice, Plugin, TFile, FileSystemAdapter, FileView } from 'obsidian';
-import { AddFiletypeModal } from './AddFiletypeModal';
-import { OrphanSidecarModal } from './OrphanSidecarModal';
+import { AddFiletypeModal } from './modals/AddFiletypeModal';
+import { OrphanSidecarModal } from './modals/OrphanSidecarModal';
 import { SidecarSettingTab } from './settings';
 import {
 	isMonitoredFileUtil,

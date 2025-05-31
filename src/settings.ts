@@ -1,5 +1,7 @@
 
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
+import { ConfirmResetModal } from './modals/ConfirmResetModal';
+import { ConfirmDeleteAllSidecarsModal } from './modals/ConfirmDeleteAllSidecarsModal';
 import type SidecarPlugin from './main';
 import { MultipleTextComponent } from 'obsidian-dev-utils/obsidian/Components/SettingComponents/MultipleTextComponent';
 
@@ -500,5 +502,49 @@ export class SidecarSettingTab extends PluginSettingTab {
 					this.plugin.settings.hideRedirectFilesInExplorer = value;
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl).setName("Danger zone").setHeading();
+
+		new Setting(containerEl)
+			.setName('Reset all settings')
+			.setDesc('Restore all Sidecar settings to their default values. This cannot be undone.')
+			.addButton((button) => {
+				button.setButtonText('Reset to defaults')
+					.onClick(() => {
+						new ConfirmResetModal(this.app, async () => {
+							Object.assign(this.plugin.settings, DEFAULT_SETTINGS);
+							await this.plugin.saveSettings();
+							new Notice('Sidecar settings reset to defaults.');
+							this.display();
+						}).open();
+					});
+				button.buttonEl.classList.add('sidecar-reset-destructive-text');
+			});
+
+		new Setting(containerEl)
+			.setName('Delete all sidecar files')
+			.setDesc('Delete all sidecar files in this vault. This cannot be undone and will remove all sidecar files managed by this plugin.')
+			.addButton((button) => {
+				button.setButtonText('Delete all sidecars')
+					.onClick(() => {
+						new ConfirmDeleteAllSidecarsModal(this.app, async () => {
+							// Find and delete all sidecar files using plugin logic
+							const deleted: string[] = [];
+							const files = this.app.vault.getFiles();
+							for (const file of files) {
+								if (this.plugin.isSidecarFile(file.path)) {
+									try {
+										await this.app.vault.delete(file);
+										deleted.push(file.path);
+									} catch (err) {
+										console.error(`Failed to delete sidecar file: ${file.path}`, err);
+									}
+								}
+							}
+							new Notice(`Deleted ${deleted.length} sidecar file(s).`);
+						}).open();
+					});
+				button.buttonEl.classList.add('sidecar-reset-destructive-text');
+			});
 	}
 }

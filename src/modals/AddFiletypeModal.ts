@@ -21,19 +21,18 @@ export class AddFiletypeModal extends Modal {
 			});
 		}
 		contentEl.createEl("p", { text: `The file type '.${this.fileExt}' is not currently monitored by the Sidecar plugin. Would you like to add it to the list of monitored file types?` });
-		new Setting(contentEl)
-			.addButton(btn =>
-				btn.setButtonText("Add file type")
-				.setCta()
-				.onClick(() => {
-					this.close();
-					this.onAccept(this.fileExt);
-				})
-			)
-			.addButton(btn =>
-				btn.setButtonText("Cancel")
-				.onClick(() => this.close())
-			);
+		// Button row
+		const buttonRow = contentEl.createDiv('modal-button-container');
+		// Add file type (left)
+		const addBtn = buttonRow.createEl('button', { text: 'Add file type' });
+		addBtn.addClass('mod-cta');
+		addBtn.onclick = () => {
+			this.close();
+			this.onAccept(this.fileExt);
+		};
+		// Cancel (right)
+		const cancelBtn = buttonRow.createEl('button', { text: 'Cancel' });
+		cancelBtn.onclick = () => this.close();
 	}
 
 	onClose() {

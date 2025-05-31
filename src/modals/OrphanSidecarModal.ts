@@ -73,19 +73,18 @@ export class OrphanSidecarModal extends Modal {
 				this.close();
 			};
 		});
-		new Setting(contentEl)
-			.addButton(btn =>
-				btn.setButtonText("Delete Orphans")
-				.setCta()
-				.onClick(() => {
-					this.close();
-					this.onAccept();
-				})
-			)
-			.addButton(btn =>
-				btn.setButtonText("Cancel")
-				.onClick(() => this.close())
-			);
+		// Button row
+		const buttonRow = contentEl.createDiv('modal-button-container');
+		// Delete Orphans (left)
+		const deleteBtn = buttonRow.createEl('button', { text: 'Delete orphans' });
+		deleteBtn.addClass('mod-cta');
+		deleteBtn.onclick = () => {
+			this.close();
+			this.onAccept();
+		};
+		// Cancel (right)
+		const cancelBtn = buttonRow.createEl('button', { text: 'Cancel' });
+		cancelBtn.onclick = () => this.close();
 	}
 
 	onClose() {
