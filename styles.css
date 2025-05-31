@@ -18,14 +18,6 @@
 	min-width: 164.8px;
 }
 
-.sidecar-notice-green {
-	color: var(--color-green, #4caf50);
-}
-
-.sidecar-notice-red {
-	color: var(--color-red, #f44336);
-}
-
 .sidecar-notice-value {
 	font-weight: bold;
 }

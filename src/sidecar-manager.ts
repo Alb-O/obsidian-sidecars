@@ -1,4 +1,4 @@
-import { TFile, TAbstractFile, Notice } from 'obsidian';
+import { TFile, Notice } from 'obsidian';
 import { getBasename } from './utils';
 import type SidecarPlugin from './main';
 

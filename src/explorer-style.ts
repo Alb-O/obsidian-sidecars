@@ -6,8 +6,8 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		plugin.sidecarAppearanceObserver = undefined;
 	}
 
-	// Add debounce timeout variable
-	let styleUpdateTimeout: NodeJS.Timeout | null = null;
+	// Add debounce timeout variable (browser safe)
+	let styleUpdateTimeout: number | null = null;
 
 	const processNavItem = (el: HTMLElement) => {
 		const dataPath = el.getAttribute("data-path");
@@ -202,12 +202,12 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 
 		// Only schedule the update if needed and not during drag operations
 		if (shouldProcessAttributes && !isDragging) {
-			if (styleUpdateTimeout) {
-				clearTimeout(styleUpdateTimeout);
+			if (styleUpdateTimeout !== null) {
+				window.clearTimeout(styleUpdateTimeout);
 			}
 
 			// Use a brief timeout to debounce multiple rapid mutations and allow DOM to settle
-			styleUpdateTimeout = setTimeout(() => {
+			styleUpdateTimeout = window.setTimeout(() => {
 				// First, process any directly affected nodes
 				if (affectedNodes.size > 0) {
 					affectedNodes.forEach((node) => processNavItem(node));

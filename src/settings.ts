@@ -2,7 +2,6 @@ import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import { ConfirmResetModal } from './modals/ConfirmResetModal';
 import { ConfirmDeleteAllSidecarsModal } from './modals/ConfirmDeleteAllSidecarsModal';
 import type SidecarPlugin from './main';
-import { MultipleTextComponent } from 'obsidian-dev-utils/obsidian/Components/SettingComponents/MultipleTextComponent';
 
 export interface SidecarPluginSettings {
 	monitoredExtensions: string[];
@@ -236,16 +235,23 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Extra file types')
 			.setDesc('List extra file types to manage (one per line).')
 			.then(setting => {
-				const box = new MultipleTextComponent((setting as any).controlEl as HTMLElement);
-				box
-					.setPlaceholder('pdf\ncanvas')
-					.setValue(this.plugin.settings.monitoredExtensions)
-					.onChange(async (value) => {
-						this.plugin.settings.monitoredExtensions = value
-							.filter(item => item.trim().length > 0)
-							.map(ext => ext.trim().replace(/^\./, '').toLowerCase());
-						await this.plugin.saveSettings();
-					});
+				// Remove any existing content
+				setting.controlEl.empty();
+				// Create textarea
+				const textarea = document.createElement('textarea');
+				textarea.placeholder = 'pdf\ncanvas';
+				textarea.value = this.plugin.settings.monitoredExtensions.join('\n');
+				textarea.addEventListener('change', async () => {
+					this.plugin.settings.monitoredExtensions = textarea.value
+						.split(/\r?\n/)
+						.map(item => item.trim())
+						.filter(item => item.length > 0)
+						.map(ext => ext.replace(/^\./, '').toLowerCase());
+					await this.plugin.saveSettings();
+				});
+				// Assign class to parent
+				setting.controlEl.classList.add('multiple-text-component');
+				setting.controlEl.appendChild(textarea);
 			});
 
 		new Setting(containerEl).setName('File Explorer behavior').setHeading();
@@ -293,28 +299,38 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Blacklist folders')
 			.setDesc('List of folders to exclude from sidecar management. Exclusions take precedence over inclusions when resolving blacklist subfolders inside whitelist folders.')
 			.then(setting => {
-				const box = new MultipleTextComponent((setting as any).controlEl as HTMLElement);
-				box
-					.setPlaceholder('/Templates/\n*/archive/*')
-					.setValue(this.plugin.settings.blacklistFolders || [])
-					.onChange(async (value) => {
-						this.plugin.settings.blacklistFolders = value.filter(item => item.trim().length > 0);
-						await this.plugin.saveSettings();
-					});
+				setting.controlEl.empty();
+				const textarea = document.createElement('textarea');
+				textarea.placeholder = '/Templates/\n*/archive/*';
+				textarea.value = (this.plugin.settings.blacklistFolders || []).join('\n');
+				textarea.addEventListener('change', async () => {
+					this.plugin.settings.blacklistFolders = textarea.value
+						.split(/\r?\n/)
+						.map(item => item.trim())
+						.filter(item => item.length > 0);
+					await this.plugin.saveSettings();
+				});
+				setting.controlEl.classList.add('multiple-text-component');
+				setting.controlEl.appendChild(textarea);
 			});
 
 		new Setting(containerEl)
 			.setName('Whitelist folders')
 			.setDesc('List of folders to include for sidecar management. If set to at least one folder, only files in these folders will be managed.')
 			.then(setting => {
-				const box = new MultipleTextComponent((setting as any).controlEl as HTMLElement);
-				box
-					.setPlaceholder('*/attachments/*')
-					.setValue(this.plugin.settings.whitelistFolders || [])
-					.onChange(async (value) => {
-						this.plugin.settings.whitelistFolders = value.filter(item => item.trim().length > 0);
-						await this.plugin.saveSettings();
-					});
+				setting.controlEl.empty();
+				const textarea = document.createElement('textarea');
+				textarea.placeholder = '*/attachments/*';
+				textarea.value = (this.plugin.settings.whitelistFolders || []).join('\n');
+				textarea.addEventListener('change', async () => {
+					this.plugin.settings.whitelistFolders = textarea.value
+						.split(/\r?\n/)
+						.map(item => item.trim())
+						.filter(item => item.length > 0);
+					await this.plugin.saveSettings();
+				});
+				setting.controlEl.classList.add('multiple-text-component');
+				setting.controlEl.appendChild(textarea);
 			});
 
 		new Setting(containerEl)

@@ -26,4 +26,4 @@ After installing, open the plugin settings and configure which file types you'd 
   - Limit sidecar management to specific folders or exclude certain folders, with support for wildcards and regular expressions.
 
 - **Advanced:**
-  - Integration with my Blender plugin '[Blend Vault](https://github.com/AMC-Albert/blend_vault_ext)' to automatically manage linked relationships between Blend files.
+  - Integration with my (WIP) Blender plugin '[Blend Vault](https://github.com/AMC-Albert/blend_vault_ext)' to automatically manage linked relationships between Blend files.
