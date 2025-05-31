@@ -1,7 +1,7 @@
 {
 	"id": "sidecars",
 	"name": "Sidecars",
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"minAppVersion": "1.18.10",
 	"description": "Automated, user-friendly management of 'sidecar' companion notes for non-markdown files.",
 	"author": "Albert O'Shea",
