@@ -10,8 +10,6 @@ import {
 } from './utils';
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style';
-import { PathInoMapService } from './external-rename/PathInoMapService';
-import { ExternalFileHandler } from './external-rename/ExternalFileHandler';
 import { handleFileCreate, handleFileDelete, handleFileRename } from './events';
 import { createSidecarForFile } from './sidecar-manager';
 
@@ -19,8 +17,6 @@ export default class SidecarPlugin extends Plugin {
 	sidecarAppearanceObserver?: MutationObserver;
 	settings: SidecarPluginSettings;
 	fileSystemAdapter!: FileSystemAdapter;
-	pathInoMapService!: PathInoMapService;
-	externalFileHandler!: ExternalFileHandler;
 
 	public isInitialRevalidating = false;
 	public hasFinishedInitialLoad = false;
@@ -38,9 +34,6 @@ export default class SidecarPlugin extends Plugin {
 		this.hasFinishedInitialLoad = false;
 
 		this.addSettingTab(new SidecarSettingTab(this.app, this));
-
-		this.pathInoMapService = new PathInoMapService();
-		await this.pathInoMapService.init(this.app);
 
 		// Add context menu item to create sidecar for file
 		this.registerEvent(
@@ -143,8 +136,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 
 			if (this.app.vault.adapter instanceof FileSystemAdapter) {
 				this.fileSystemAdapter = this.app.vault.adapter;
-				this.externalFileHandler = new ExternalFileHandler(this, this.pathInoMapService, this.fileSystemAdapter);
-				await this.externalFileHandler.init();
 			} else {
 				new Notice("Sidecar Plugin: FileSystemAdapter not available. External file move/rename detection will not work.");
 			}
@@ -165,12 +156,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
 		}
-		if (this.externalFileHandler) {
-			this.externalFileHandler.cleanup();
-		}
-		if (this.pathInoMapService) {
-			this.pathInoMapService.close();
-		}
 		new Notice('Sidecar Plugin unloaded.');
 	}
 
@@ -186,32 +171,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 
 	async saveSettings(refreshStyles: boolean = true) {
 		await this.saveData(this.settings); // this.settings now has the new values and they are saved.
-
-		// Ensure externalFileHandler instance exists if it's needed and wasn't created during onload
-		if (this.settings.enableExternalRenameDetection && !this.externalFileHandler && this.app.vault.adapter instanceof FileSystemAdapter) {
-			if (!this.pathInoMapService) { // Should always exist, but good to be defensive
-				this.pathInoMapService = new PathInoMapService();
-				await this.pathInoMapService.init(this.app);
-				console.log('Sidecar Plugin: PathInoMapService initialized in saveSettings as it was missing.');
-			}
-			this.fileSystemAdapter = this.app.vault.adapter;
-			this.externalFileHandler = new ExternalFileHandler(this, this.pathInoMapService, this.fileSystemAdapter);
-			console.log('Sidecar Plugin: ExternalFileHandler instance created in saveSettings.');
-		}
-
-		if (this.externalFileHandler) {
-			if (this.settings.enableExternalRenameDetection) {
-				console.log('Sidecar Plugin: Setting change: External rename detection is now enabled. Initializing/Re-initializing ExternalFileHandler.');
-				await this.externalFileHandler.init();
-			} else {
-				console.log('Sidecar Plugin: Setting change: External rename detection is now disabled. Cleaning up ExternalFileHandler.');
-				this.externalFileHandler.cleanup();
-			}
-		} else if (this.settings.enableExternalRenameDetection) {
-			// This case means externalFileHandler couldn't be created (e.g., adapter still not ready)
-			console.warn('Sidecar Plugin: External rename detection is enabled, but ExternalFileHandler could not be initialized/created (FileSystemAdapter might not be ready).');
-			new Notice("Sidecar: External rename detection enabled, but couldn't start. FileSystemAdapter might not be ready. Try restarting Obsidian or check console.");
-		}
 
 		if (refreshStyles) {
 			this.updateSidecarCss();

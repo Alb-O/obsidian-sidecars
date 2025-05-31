@@ -1,6 +1,10 @@
 # Sidecars Plugin for Obsidian
 
-Automated, user-friendly management of 'sidecar' files—companion notes for non-markdown files (images, videos, audio, etc.) in your Obsidian vault.
+Automated, user-friendly management of 'sidecar' companion notes for non-markdown files.
+
+## Getting started
+
+After installing, open the plugin settings and configure which file types you'd like the plugin to monitor and manage. You can broadly add media file types (i.e. images, videos, or audio) or specific file types not natively supported by Obsidian by creating a list of extensions in the `Extra file types` setting.
 
 ## Features
 
@@ -18,13 +22,8 @@ Automated, user-friendly management of 'sidecar' files—companion notes for non
   - Visually tag, color, and style sidecar files and their extensions in the File Explorer.
   - Optionally dim, hide, or add arrow indicators to sidecar files.
 
-- **Flexible file type management:**
-  - Easily add or remove monitored file types (extensions) from the settings tab.
-  - Bulk enable support for all common image, video, or audio formats.
-
 - **Folder scoping:**
   - Limit sidecar management to specific folders or exclude certain folders, with support for wildcards and regular expressions.
 
 - **Advanced:**
-  - Detects and handles file renames/moves made outside of Obsidian (optional polling).
-  - Integrates with Blend Vault redirect files for Blender workflows.
+  - Integration with my Blender plugin '[Blend Vault](https://github.com/AMC-Albert/blend_vault_ext)' to automatically manage linked relationships between Blend files.

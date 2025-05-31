@@ -20,8 +20,6 @@ export interface SidecarPluginSettings {
 	showMdInSidecarTag: boolean;
 	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer: boolean;
-	enableExternalRenameDetection: boolean;
-	externalRenamePollingInterval: number;
 	autoCreateSidecars: boolean;
 	prependPeriodToExtTags: boolean;
 
@@ -43,8 +41,6 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	showMdInSidecarTag: false,
 	redirectFileSuffix: 'redirect',
 	hideRedirectFilesInExplorer: true,
-	enableExternalRenameDetection: false,
-	externalRenamePollingInterval: 2000,
 	autoCreateSidecars: true,
 	prependPeriodToExtTags: false,
 };
@@ -343,32 +339,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			);
-
-		new Setting(containerEl).setName('External rename detection').setHeading();
-
-		new Setting(containerEl)
-			.setName('Enable external rename detection')
-			.setDesc('Detect and handle file renames/moves made outside of Obsidian. This helps keep sidecars synchronized when files are renamed externally.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enableExternalRenameDetection)
-				.onChange(async (value) => {
-					this.plugin.settings.enableExternalRenameDetection = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Polling interval (milliseconds)')
-			.setDesc('How often to check for file changes when using polling mode. Lower values = more responsive but higher CPU usage. Use 0 to disable polling and rely only on native file events.')
-			.addText(text => text
-				.setPlaceholder('2000')
-				.setValue(this.plugin.settings.externalRenamePollingInterval.toString())
-				.onChange(async (value) => {
-					const numValue = parseInt(value);
-					if (!isNaN(numValue) && numValue >= 0) {
-						this.plugin.settings.externalRenamePollingInterval = numValue;
-						await this.plugin.saveSettings();
-					}
-				}));
 
 		new Setting(containerEl).setName('File Explorer styles').setHeading();
 
