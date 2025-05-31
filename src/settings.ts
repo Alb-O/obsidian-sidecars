@@ -1,3 +1,4 @@
+
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import type SidecarPlugin from './main';
 import { MultipleTextComponent } from 'obsidian-dev-utils/obsidian/Components/SettingComponents/MultipleTextComponent';
@@ -5,21 +6,23 @@ import { MultipleTextComponent } from 'obsidian-dev-utils/obsidian/Components/Se
 export interface SidecarPluginSettings {
 	monitoredExtensions: string[];
 	sidecarSuffix: string;
-	blacklistFolders?: string[];
-	whitelistFolders?: string[];
-	hideSidecarsInExplorer?: boolean;
-	useRegexForFolderLists?: boolean;
-	dimSidecarsInExplorer?: boolean;
-	prependSidecarIndicator?: boolean;
+	blacklistFolders: string[];
+	whitelistFolders: string[];
+	hideSidecarsInExplorer: boolean;
+	useRegexForFolderLists: boolean;
+	dimSidecarsInExplorer: boolean;
+	prependSidecarIndicator: boolean;
 	revalidateOnStartup: boolean;
-	preventDraggingSidecars?: boolean;
-	colorSidecarExtension?: boolean;
-	hideMainExtensionInExplorer?: boolean;
-	showMdInSidecarTag?: boolean;
+	preventDraggingSidecars: boolean;
+	colorSidecarExtension: boolean;
+	hideMainExtensionInExplorer: boolean;
+	showMdInSidecarTag: boolean;
 	redirectFileSuffix: string;
-	hideRedirectFilesInExplorer?: boolean;
+	hideRedirectFilesInExplorer: boolean;
 	enableExternalRenameDetection: boolean;
 	externalRenamePollingInterval: number;
+	autoCreateSidecars: boolean;
+
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -40,6 +43,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	hideRedirectFilesInExplorer: true,
 	enableExternalRenameDetection: false,
 	externalRenamePollingInterval: 2000,
+	autoCreateSidecars: true,
 };
 
 export class SidecarSettingTab extends PluginSettingTab {
@@ -67,7 +71,8 @@ export class SidecarSettingTab extends PluginSettingTab {
 						// Only save if the value has actually changed from the last saved valid state
 						if (this.plugin.settings.sidecarSuffix !== currentValue) {
 							this.plugin.settings.sidecarSuffix = currentValue;
-							await this.plugin.saveSettings();							// Update example tags in settings UI
+							await this.plugin.saveSettings();
+							// Update example tags in settings UI
 							const exampleTags = this.containerEl.querySelectorAll('.sidecar-tag-example');
 							exampleTags.forEach(tag => {
 								if (tag instanceof HTMLElement) {
@@ -94,6 +99,17 @@ export class SidecarSettingTab extends PluginSettingTab {
 					}
 				});
 			});
+
+		new Setting(containerEl)
+			.setName('Automatically create new sidecars')
+			.setDesc('If enabled, new sidecars will be created automatically for monitored files. If disabled, only existing sidecars will be managed.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoCreateSidecars)
+				.onChange(async (value) => {
+					this.plugin.settings.autoCreateSidecars = value;
+					await this.plugin.saveSettings();
+				})
+			);
 
 		new Setting(containerEl)
 			.setName('Revalidate sidecars on startup')
@@ -240,7 +256,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Prevent dragging of sidecar files')
 			.setDesc('If enabled, sidecar files cannot be dragged in the File Explorer. This helps prevent accidental moves.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.preventDraggingSidecars ?? true)
+				.setValue(this.plugin.settings.preventDraggingSidecars)
 				.onChange(async (value) => {
 					this.plugin.settings.preventDraggingSidecars = value;
 					await this.plugin.saveSettings();
@@ -254,7 +270,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Hide sidecar files')
 			.setDesc("Completely hide sidecar files in Obsidian's File Explorer.")
 			.addToggle(toggle => {
-				toggle.setValue(this.plugin.settings.hideSidecarsInExplorer ?? false)
+				toggle.setValue(this.plugin.settings.hideSidecarsInExplorer)
 					.onChange(async (value) => {
 						this.plugin.settings.hideSidecarsInExplorer = value;
 						await this.plugin.saveSettings();
@@ -318,7 +334,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 				return frag;
 			})())
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.useRegexForFolderLists ?? false)
+				.setValue(this.plugin.settings.useRegexForFolderLists)
 				.onChange(async (value) => {
 					this.plugin.settings.useRegexForFolderLists = value;
 					await this.plugin.saveSettings();
@@ -358,7 +374,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Dim sidecar files')
 			.setDesc('Visually dim sidecar files in the File Explorer.')
 			.addToggle(toggle => {
-				toggle.setValue(this.plugin.settings.dimSidecarsInExplorer ?? false)
+				toggle.setValue(this.plugin.settings.dimSidecarsInExplorer)
 					.onChange(async (value) => {
 						this.plugin.settings.dimSidecarsInExplorer = value;
 						await this.plugin.saveSettings();
@@ -376,7 +392,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 				return frag;
 			})())
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.prependSidecarIndicator ?? false)
+				.setValue(this.plugin.settings.prependSidecarIndicator)
 				.onChange(async (value) => {
 					this.plugin.settings.prependSidecarIndicator = value;
 					await this.plugin.saveSettings();
@@ -396,7 +412,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 				return frag;
 			})())
 			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.colorSidecarExtension ?? true)
+				.setValue(this.plugin.settings.colorSidecarExtension)
 				.onChange(async (value) => {
 					this.plugin.settings.colorSidecarExtension = value;
 					await this.plugin.saveSettings();
@@ -407,7 +423,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Show .md in sidecar extension')
 			.setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showMdInSidecarTag ?? false).onChange(async (value) => {
+				.setValue(this.plugin.settings.showMdInSidecarTag).onChange(async (value) => {
 					this.plugin.settings.showMdInSidecarTag = value;
 					await this.plugin.saveSettings(); // saveSettings will refresh styles automatically
 				}));
@@ -426,7 +442,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 				return frag;
 			})())
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.hideMainExtensionInExplorer ?? false)
+				.setValue(this.plugin.settings.hideMainExtensionInExplorer)
 				.onChange(async (value) => {
 					this.plugin.settings.hideMainExtensionInExplorer = value;
 					await this.plugin.saveSettings();
@@ -479,7 +495,7 @@ export class SidecarSettingTab extends PluginSettingTab {
 			.setName('Hide redirect files')
 			.setDesc('Completely hide redirect files in Obsidian\'s File Explorer.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.hideRedirectFilesInExplorer ?? false)
+				.setValue(this.plugin.settings.hideRedirectFilesInExplorer)
 				.onChange(async (value) => {
 					this.plugin.settings.hideRedirectFilesInExplorer = value;
 					await this.plugin.saveSettings();

@@ -174,7 +174,7 @@ async revalidateSidecars() {
 		if (isMonitored) {
 			let sidecarEnsuredThisIteration = initialSidecarExists;
 
-			if (!initialSidecarExists) {
+			if (!initialSidecarExists && (this.settings.autoCreateSidecars ?? true)) {
 				try {
 					const createdFile = await this.app.vault.create(sidecarPath, '');
 

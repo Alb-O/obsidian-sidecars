@@ -18,17 +18,20 @@ export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile): 
 	}
 
 	if (plugin.isMonitoredFile(file.path)) {
-		const sidecarPath = plugin.getSidecarPath(file.path);
-		if (!plugin.app.vault.getAbstractFileByPath(sidecarPath)) {
-			try {
-				await plugin.app.vault.create(sidecarPath, '');
-				new Notice(`Created sidecar: ${sidecarPath.split('/').pop()}`);
-			} catch (error) {
-				if (String(error).includes('File already exists')) {
-					return;
+		// Only create if autoCreateSidecars is enabled
+		if (plugin.settings.autoCreateSidecars ?? true) {
+			const sidecarPath = plugin.getSidecarPath(file.path);
+			if (!plugin.app.vault.getAbstractFileByPath(sidecarPath)) {
+				try {
+					await plugin.app.vault.create(sidecarPath, '');
+					new Notice(`Created sidecar: ${sidecarPath.split('/').pop()}`);
+				} catch (error) {
+					if (String(error).includes('File already exists')) {
+						return;
+					}
+					console.error(`Sidecar Plugin: Error creating sidecar file ${sidecarPath}: `, error);
+					new Notice(`Error creating sidecar for ${file.name}`);
 				}
-				console.error(`Sidecar Plugin: Error creating sidecar file ${sidecarPath}: `, error);
-				new Notice(`Error creating sidecar for ${file.name}`);
 			}
 		}
 	}
