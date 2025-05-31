@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	whitelistFolders: [],
 	hideSidecarsInExplorer: false,
 	useRegexForFolderLists: false,
-	dimSidecarsInExplorer: false,
+	dimSidecarsInExplorer: true,
 	prependSidecarIndicator: false,
 	revalidateOnStartup: true,
 	preventDraggingSidecars: true,
