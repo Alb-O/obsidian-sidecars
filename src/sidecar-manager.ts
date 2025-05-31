@@ -34,8 +34,8 @@ export async function createSidecarForFile(plugin: SidecarPlugin, file: TFile, f
 					if (String(error).includes('File already exists')) {
 						return;
 					}
-					console.error(`Sidecar Plugin: Error creating sidecar file ${sidecarPath}: `, error);
-					new Notice(`Error creating sidecar for ${file.name}`);
+				   // Only show error notice for user-facing issues
+				   new Notice(`Error creating sidecar for ${file.name}`);
 				}
 			}
 		}
@@ -91,18 +91,18 @@ export async function handleSidecarRename(plugin: SidecarPlugin, file: TFile, ol
 			// Check if a file/folder already exists at the target newSidecarPath
 			const existingNewSidecar = plugin.app.vault.getAbstractFileByPath(newSidecarPath);
 			if (existingNewSidecar && existingNewSidecar.path !== oldSidecarFile.path) { // Don't conflict with itself if no actual move
-				console.warn(`Sidecar Plugin: Sidecar for ${newPath} already exists at ${newSidecarPath}. Cannot move ${oldSidecarPath}.`);
+			   // Only warn in dev, skip in production
 				new Notice(`Sidecar for ${getBasename(newPath)} already exists. Old sidecar not moved.`, 3000);
 				// Optionally, delete the oldSidecarFile here if it's considered redundant and we don't want duplicates.
 				// await plugin.app.vault.delete(oldSidecarFile);
 			} else if (!existingNewSidecar || existingNewSidecar.path === oldSidecarFile.path) {
 				// If it doesn't exist, or it exists but it *is* the old sidecar (i.e. just a name change in same folder)
 				await plugin.app.vault.rename(oldSidecarFile, newSidecarPath);
-				console.log(`Sidecar Plugin: Moved sidecar from ${oldSidecarPath} to ${newSidecarPath}`);
+			   // Sidecar moved
 				// No user notice here as it's an automatic accompanying action.
 			}
 		} catch (error) {
-			console.error(`Sidecar Plugin: Error moving sidecar from ${oldSidecarPath} to ${newSidecarPath}:`, error);
+		   // Only show error notice for user-facing issues
 			new Notice(`Error moving sidecar for ${getBasename(newPath)}`, 3000);
 		}
 	} else {
@@ -115,7 +115,7 @@ export async function handleSidecarRename(plugin: SidecarPlugin, file: TFile, ol
 					await plugin.app.vault.create(newSidecarPath, '');
 					new Notice(`Created sidecar: ${newSidecarPath.split('/').pop()}`);
 				} catch (error) {
-					console.error(`Sidecar Plugin: Error creating sidecar file ${newSidecarPath}:`, error);
+				   // Only show error notice for user-facing issues
 					new Notice(`Error creating sidecar for ${getBasename(newPath)}`);
 				}
 			}
@@ -152,12 +152,12 @@ export async function revalidateAllSidecars(plugin: SidecarPlugin): Promise<void
 					await plugin.app.vault.create(sidecarPath, '');
 					newlyCreatedSidecarCount++;
 					sidecarEnsuredThisIteration = true;
-					console.log(`Sidecar Plugin: Created sidecar for ${file.path} at ${sidecarPath}`);
+			   // Sidecar created
 				} catch (error) {
 					if (String(error).includes('File already exists')) {
 						sidecarEnsuredThisIteration = true;
 					} else {
-						console.error(`Sidecar Plugin: Error creating sidecar for ${file.path}:`, error);
+				   // Only show error notice for user-facing issues
 					}
 				}
 			}
@@ -190,14 +190,14 @@ export async function revalidateAllSidecars(plugin: SidecarPlugin): Promise<void
 				try {
 					await plugin.app.vault.delete(file);
 					deletedOrphanCount++;
-					console.log(`Sidecar Plugin: Deleted orphaned sidecar ${file.path}: ${reason}`);
+				   // Orphaned sidecar deleted
 				} catch (error) {
-					console.error(`Sidecar Plugin: Error deleting orphaned sidecar ${file.path}:`, error);
+				   // Only show error notice for user-facing issues
 				}
 			}
 		}
 	}
 
-	console.log(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
+// Revalidation complete
 	new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 }

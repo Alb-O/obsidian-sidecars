@@ -19,7 +19,7 @@ async function renameSidecarMainFile(plugin: SidecarPlugin, oldSidecarPath: stri
 	}	// Check if the main file exists
 	const mainFile = plugin.app.vault.getAbstractFileByPath(oldMainPath);
 	if (!mainFile || !(mainFile instanceof TFile)) {
-		console.log(`Sidecar Plugin: Main file ${oldMainPath} not found, skipping rename`);
+		// Main file not found, skipping rename (no debug output)
 		return;
 	}
 
@@ -33,7 +33,6 @@ async function renameSidecarMainFile(plugin: SidecarPlugin, oldSidecarPath: stri
 
 	try {
 		await plugin.app.vault.rename(mainFile, newMainPath);
-		console.log(`Sidecar Plugin: Renamed main file from ${oldMainPath} to ${newMainPath}`);
 		new Notice(`Also renamed main file to: ${newMainPath.split('/').pop()}`, 2000);
 	} catch (error) {
 		console.error(`Sidecar Plugin: Error renaming main file from ${oldMainPath} to ${newMainPath}:`, error);
@@ -46,40 +45,33 @@ async function renameSidecarMainFile(plugin: SidecarPlugin, oldSidecarPath: stri
  */
 async function handleExtensionReapplication(plugin: SidecarPlugin, file: TFile, oldPath: string): Promise<boolean> {
 	const newPath = file.path;
-	console.log(`Sidecar Plugin: handleExtensionReapplication - oldPath: ${oldPath}, newPath: ${newPath}`);
 	// Check if the old path was a sidecar file
 	if (plugin.isSidecarFile(oldPath)) {
-		console.log(`Sidecar Plugin: Old path was a sidecar file: ${oldPath}`);
 		const mainPath = plugin.getSourcePathFromSidecar(oldPath);
 		if (mainPath) {
 			const expectedNewSidecarPath = plugin.getSidecarPath(mainPath);
-			console.log(`Sidecar Plugin: mainPath: ${mainPath}, expectedNewSidecarPath: ${expectedNewSidecarPath}`);// If the new path doesn't have the sidecar extension but should be a sidecar
+			// If the new path doesn't have the sidecar extension but should be a sidecar
 			if (newPath !== expectedNewSidecarPath && !plugin.isSidecarFile(newPath)) {
-				console.log(`Sidecar Plugin: New path ${newPath} doesn't have sidecar extension`);
-				
 				// Get the new file name to use as the base for the restored sidecar
 				const newFileName = newPath.substring(newPath.lastIndexOf('/') + 1);
-				
 				// Remove only .md extension if present, preserving other extensions
 				const newFileNameWithoutMd = newFileName.endsWith('.md') 
 					? newFileName.slice(0, -3) 
 					: newFileName;
-						// Extract the extension pattern from the original main file
+				// Extract the extension pattern from the original main file
 				const mainFileName = mainPath.substring(mainPath.lastIndexOf('/') + 1);
 				const mainBaseName = mainFileName.lastIndexOf('.') !== -1 
 					? mainFileName.slice(0, mainFileName.lastIndexOf('.'))
 					: mainFileName;
 				const mainExtensions = mainFileName.substring(mainBaseName.length); // e.g., ".blend"
-				
 				// Get just the base name from the new filename (without any extensions)
 				const newBaseName = newFileNameWithoutMd.lastIndexOf('.') !== -1 
 					? newFileNameWithoutMd.slice(0, newFileNameWithoutMd.lastIndexOf('.'))
 					: newFileNameWithoutMd;
-						// Build the new sidecar path: newBaseName + originalExtensions + .side.md
+				// Build the new sidecar path: newBaseName + originalExtensions + .side.md
 				const directory = newPath.substring(0, newPath.lastIndexOf('/') + 1);
 				const newSidecarPath = directory + newBaseName + mainExtensions + '.' + plugin.settings.sidecarSuffix + '.md';
-				
-				console.log(`Sidecar Plugin: Will restore extension - newBaseName: "${newBaseName}", mainExtensions: "${mainExtensions}", newSidecarPath: "${newSidecarPath}"`);try {
+				try {
 					await plugin.app.vault.rename(file, newSidecarPath);
 					// Also rename the associated main file if needed
 					await renameSidecarMainFile(plugin, oldPath, newSidecarPath);
@@ -90,7 +82,6 @@ async function handleExtensionReapplication(plugin: SidecarPlugin, file: TFile, 
 			}
 		}
 	}
-	
 	return false; // No extension reapplication was needed/performed
 }
 
@@ -109,7 +100,6 @@ export async function handleFileDelete(plugin: SidecarPlugin, file: TAbstractFil
 export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFile, oldPath: string): Promise<void> {
 	if (file instanceof TFile) {
 		const newPath = file.path;
-		console.log(`Sidecar Plugin: handleFileRename called - oldPath: ${oldPath}, newPath: ${newPath}`);
 
 		// First, check if we need to re-apply extensions for improperly renamed sidecar/redirect files
 		const extensionWasReapplied = await handleExtensionReapplication(plugin, file, oldPath);
@@ -124,8 +114,6 @@ export async function handleFileRename(plugin: SidecarPlugin, file: TAbstractFil
 
 		// Handle sidecar file renaming
 		if (plugin.isSidecarFile(newPath)) {
-			console.log(`Sidecar Plugin: Sidecar file was renamed from ${oldPath} to ${newPath}`);
-			
 			// Rename the associated main file when a sidecar is renamed
 			await renameSidecarMainFile(plugin, oldPath, newPath);
 			
