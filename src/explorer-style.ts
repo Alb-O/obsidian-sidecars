@@ -142,6 +142,35 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				el.removeAttribute("draggable");
 			}
 		}
+
+		// --- Handle regular files with redirect decorators ---
+		// Only process files that are not sidecar or redirect files
+		if (!isSidecar && !isRedirect && plugin.settings.showRedirectDecorator) {
+			// Check if this file has a redirect file
+			if (plugin.hasRedirectFile(dataPath)) {
+				// Add redirect decorator icon
+				const titleEl = el.querySelector('.tree-item-inner');
+				if (titleEl) {
+					// Remove any existing redirect decorator
+					const existingDecorator = el.querySelector('.redirect-decorator');
+					if (existingDecorator) {
+						existingDecorator.remove();
+					}					// Add the redirect decorator icon at the beginning
+					const decoratorEl = document.createElement('span');
+					decoratorEl.className = 'redirect-decorator';
+					decoratorEl.title = 'This file has a redirect file';
+					
+					// Insert the decorator before the existing content
+					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
+				}
+			} else {
+				// Remove redirect decorator if it exists but redirect file is gone
+				const existingDecorator = el.querySelector('.redirect-decorator');
+				if (existingDecorator) {
+					existingDecorator.remove();
+				}
+			}
+		}
 	};
 	plugin.sidecarAppearanceObserver = new MutationObserver((mutations) => {
 		// Flag to track if we need to process attribute changes
@@ -215,9 +244,7 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				// First, process any directly affected nodes
 				if (affectedNodes.size > 0) {
 					affectedNodes.forEach((node) => processNavItem(node));
-				}
-
-				// If we had data-path changes, refresh relevant files
+				}				// If we had data-path changes, refresh relevant files
 				// This ensures that moved files are properly styled
 				if (dataPathChanged) {
 					const query = '.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"], ' +
@@ -226,6 +253,19 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 						.forEach((el) => {
 							if (el instanceof HTMLElement) processNavItem(el);
 						});
+					
+					// Also refresh all regular files to update redirect decorators
+					if (plugin.settings.showRedirectDecorator) {
+						document.querySelectorAll('.nav-file-title')
+							.forEach((el) => {
+								if (el instanceof HTMLElement) {
+									const dataPath = el.getAttribute("data-path");
+									if (dataPath && !plugin.isSidecarFile(dataPath) && !plugin.isRedirectFile(dataPath)) {
+										processNavItem(el);
+									}
+								}
+							});
+					}
 				}
 				styleUpdateTimeout = null;
 			}, 50); // Increased timeout from 20ms to 50ms
@@ -316,8 +356,7 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 			padding-bottom: calc(2 * var(--size-4-1)) !important;
 		}
 		`;
-	}
-	// Hide default .md extensions for sidecar files (dynamic - uses template variables)
+	}	// Hide default .md extensions for sidecar files (dynamic - uses template variables)
 	styleTextContent += `
 	/* Hide default .md extensions for sidecar files */
 	.nav-file-title[data-path$='${fullSidecarExtension}'] .nav-file-tag:not(.sidecar-tag):not(.main-ext-tag):not(.redirect-tag) {

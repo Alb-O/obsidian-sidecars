@@ -127,3 +127,19 @@ export function getSourcePathFromSidecarUtil(sidecarPath: string, settings: Side
 	}
 	return null;
 }
+
+export function getRedirectPathUtil(sourcePath: string, settings: SidecarPluginSettings): string {
+	return sourcePath + '.' + settings.redirectFileSuffix + '.md';
+}
+
+export function isRedirectFileUtil(filePath: string, settings: SidecarPluginSettings): boolean {
+	return filePath.endsWith('.' + settings.redirectFileSuffix + '.md');
+}
+
+export function getSourcePathFromRedirectUtil(redirectPath: string, settings: SidecarPluginSettings): string | null {
+	const fullSuffix = '.' + settings.redirectFileSuffix + '.md';
+	if (redirectPath.endsWith(fullSuffix)) {
+		return redirectPath.substring(0, redirectPath.length - fullSuffix.length);
+	}
+	return null;
+}

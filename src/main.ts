@@ -8,6 +8,9 @@ import {
 	getSidecarPathUtil,
 	isSidecarFileUtil,
 	getSourcePathFromSidecarUtil,
+	getRedirectPathUtil,
+	isRedirectFileUtil,
+	getSourcePathFromRedirectUtil,
 } from './utils';
 import { DEFAULT_SETTINGS, SidecarPluginSettings } from './settings';
 import { updateSidecarFileAppearance, updateSidecarCss } from './explorer-style';
@@ -150,7 +153,6 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 			this.sidecarAppearanceObserver = undefined;
 		}
 	}
-
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 		if (typeof this.settings.revalidateOnStartup === 'undefined') {
@@ -158,6 +160,9 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 		}
 		if (typeof this.settings.redirectFileSuffix === 'undefined') {
 			this.settings.redirectFileSuffix = DEFAULT_SETTINGS.redirectFileSuffix;
+		}
+		if (typeof this.settings.showRedirectDecorator === 'undefined') {
+			this.settings.showRedirectDecorator = DEFAULT_SETTINGS.showRedirectDecorator;
 		}
 	}
 
@@ -282,8 +287,24 @@ async revalidateSidecars() {
 	isSidecarFile(filePath: string): boolean {
 		return isSidecarFileUtil(filePath, this.settings);
 	}
-
 	getSourcePathFromSidecar(sidecarPath: string): string | null {
 		return getSourcePathFromSidecarUtil(sidecarPath, this.settings);
+	}
+
+	getRedirectPath(filePath: string): string {
+		return getRedirectPathUtil(filePath, this.settings);
+	}
+
+	isRedirectFile(filePath: string): boolean {
+		return isRedirectFileUtil(filePath, this.settings);
+	}
+
+	getSourcePathFromRedirect(redirectPath: string): string | null {
+		return getSourcePathFromRedirectUtil(redirectPath, this.settings);
+	}
+
+	hasRedirectFile(filePath: string): boolean {
+		const redirectPath = this.getRedirectPath(filePath);
+		return this.app.vault.getAbstractFileByPath(redirectPath) !== null;
 	}
 }

@@ -89,12 +89,22 @@ async function handleExtensionReapplication(plugin: SidecarPlugin, file: TFile, 
 export async function handleFileCreate(plugin: SidecarPlugin, file: TAbstractFile): Promise<void> {
 	if (file instanceof TFile) {
 		await createSidecarForFile(plugin, file);
+		
+		// If this is a redirect file being created, update the decorator for the source file
+		if (plugin.isRedirectFile(file.path)) {
+			plugin.updateSidecarFileAppearance();
+		}
 	}
 }
 
 export async function handleFileDelete(plugin: SidecarPlugin, file: TAbstractFile): Promise<void> {
 	if (file instanceof TFile) {
 		await deleteSidecarForFile(plugin, file);
+		
+		// If this is a redirect file being deleted, update the decorator for the source file
+		if (plugin.isRedirectFile(file.path)) {
+			plugin.updateSidecarFileAppearance();
+		}
 	}
 }
 

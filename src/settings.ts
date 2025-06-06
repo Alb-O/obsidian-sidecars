@@ -32,6 +32,7 @@ export interface SidecarPluginSettings {
 	showMdInSidecarTag: boolean;
 	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer: boolean;
+	showRedirectDecorator: boolean;
 	autoCreateSidecars: boolean;
 	prependPeriodToExtTags: boolean;
 	hideSidecarBaseNameInExplorer?: boolean;
@@ -51,9 +52,9 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	preventDraggingSidecars: true,
 	colorSidecarExtension: true,
 	hideMainExtensionInExplorer: false,
-	showMdInSidecarTag: false,
-	redirectFileSuffix: 'redirect',
+	showMdInSidecarTag: false,	redirectFileSuffix: 'redirect',
 	hideRedirectFilesInExplorer: true,
+	showRedirectDecorator: true,
 	autoCreateSidecars: true,
 	prependPeriodToExtTags: false,
 	hideSidecarBaseNameInExplorer: false,
@@ -521,7 +522,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 					}
 				};
 			});
-
 		new Setting(containerEl)
 			.setName('Hide redirect files')
 			.setDesc('Completely hide redirect files in Obsidian\'s File Explorer.')
@@ -529,6 +529,16 @@ export class SidecarSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.hideRedirectFilesInExplorer)
 				.onChange(async (value) => {
 					this.plugin.settings.hideRedirectFilesInExplorer = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Show redirect file decorator')
+			.setDesc('Show a decorator icon at the beginning of file names when a redirect file exists for that file.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showRedirectDecorator)
+				.onChange(async (value) => {
+					this.plugin.settings.showRedirectDecorator = value;
 					await this.plugin.saveSettings();
 				}));
 
