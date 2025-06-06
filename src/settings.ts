@@ -33,6 +33,7 @@ export interface SidecarPluginSettings {
 	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer: boolean;
 	showRedirectDecorator: boolean;
+	showRedirectDecoratorOnSidecars: boolean;
 	autoCreateSidecars: boolean;
 	prependPeriodToExtTags: boolean;
 	hideSidecarBaseNameInExplorer?: boolean;
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	showMdInSidecarTag: false,	redirectFileSuffix: 'redirect',
 	hideRedirectFilesInExplorer: true,
 	showRedirectDecorator: true,
+	showRedirectDecoratorOnSidecars: false,
 	autoCreateSidecars: true,
 	prependPeriodToExtTags: false,
 	hideSidecarBaseNameInExplorer: false,
@@ -531,7 +533,6 @@ export class SidecarSettingTab extends PluginSettingTab {
 					this.plugin.settings.hideRedirectFilesInExplorer = value;
 					await this.plugin.saveSettings();
 				}));
-
 		new Setting(containerEl)
 			.setName('Show redirect file decorator')
 			.setDesc('Show a decorator icon at the beginning of file names when a redirect file exists for that file.')
@@ -539,6 +540,16 @@ export class SidecarSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.showRedirectDecorator)
 				.onChange(async (value) => {
 					this.plugin.settings.showRedirectDecorator = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Show redirect decorator on sidecars')
+			.setDesc('Also show the redirect decorator on sidecar files themselves when their main file has a redirect file.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showRedirectDecoratorOnSidecars)
+				.onChange(async (value) => {
+					this.plugin.settings.showRedirectDecoratorOnSidecars = value;
 					await this.plugin.saveSettings();
 				}));
 

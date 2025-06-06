@@ -164,6 +164,9 @@ async function handleCreateSidecarForFile(this: any, file: TFile) {
 		if (typeof this.settings.showRedirectDecorator === 'undefined') {
 			this.settings.showRedirectDecorator = DEFAULT_SETTINGS.showRedirectDecorator;
 		}
+		if (typeof this.settings.showRedirectDecoratorOnSidecars === 'undefined') {
+			this.settings.showRedirectDecoratorOnSidecars = DEFAULT_SETTINGS.showRedirectDecoratorOnSidecars;
+		}
 	}
 
 	async saveSettings(refreshStyles: boolean = true) {
@@ -302,9 +305,14 @@ async revalidateSidecars() {
 	getSourcePathFromRedirect(redirectPath: string): string | null {
 		return getSourcePathFromRedirectUtil(redirectPath, this.settings);
 	}
-
 	hasRedirectFile(filePath: string): boolean {
 		const redirectPath = this.getRedirectPath(filePath);
 		return this.app.vault.getAbstractFileByPath(redirectPath) !== null;
+	}
+
+	sidecarMainFileHasRedirect(sidecarPath: string): boolean {
+		const mainFilePath = this.getSourcePathFromSidecar(sidecarPath);
+		if (!mainFilePath) return false;
+		return this.hasRedirectFile(mainFilePath);
 	}
 }

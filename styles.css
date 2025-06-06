@@ -155,6 +155,110 @@
 	}
 }
 
+/* Dimmed versions of the animations */
+@keyframes pulse-redirect-dimmed {
+	0%, 100% {
+		transform: scale(1);
+		opacity: 0.3;
+	}
+	50% {
+		transform: scale(1.2);
+		opacity: 0.5;
+	}
+}
+
+@keyframes pulse-ring-redirect-dimmed {
+	0% {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 0.2;
+	}
+	100% {
+		transform: translate(-50%, -50%) scale(2.5);
+		opacity: 0;
+	}
+}
+
 .nav-file-title:hover .redirect-decorator {
+	animation-duration: 1s;
+}
+
+/* Dimmed redirect decorator styling for sidecars */
+.redirect-decorator.dimmed {
+	animation: pulse-redirect-dimmed 2s infinite;
+}
+
+.redirect-decorator.dimmed::before {
+	animation: pulse-ring-redirect-dimmed 2s infinite;
+}
+
+/* Faster animation on hover for dimmed decorators */
+.nav-file-title:hover .redirect-decorator.dimmed {
+	animation-duration: 1s;
+}
+
+.nav-file-title:hover .redirect-decorator.dimmed::before {
+	animation-duration: 1s;
+}
+
+/* Restore normal animation for dimmed decorators when their parent item is active */
+.nav-file-title.is-active .redirect-decorator.dimmed {
+	animation: pulse-redirect 1s infinite;
+}
+
+.nav-file-title.is-active .redirect-decorator.dimmed::before {
+	animation: pulse-ring-redirect 1s infinite;
+}
+
+/* Accent-colored redirect decorator for sidecars when sidecar coloring is enabled */
+.redirect-decorator.accent-colored {
+	background-color: var(--text-accent);
+}
+
+.redirect-decorator.accent-colored::before {
+	background-color: var(--text-accent);
+}
+
+/* Dimmed accent-colored animations */
+@keyframes pulse-redirect-accent-dimmed {
+	0%, 100% {
+		transform: scale(1);
+		opacity: 0.32; /* 0.4 * 0.8 */
+	}
+	50% {
+		transform: scale(1.2);
+		opacity: 0.4; /* matches the dimmed opacity */
+	}
+}
+
+@keyframes pulse-ring-redirect-accent-dimmed {
+	0% {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 0.2; /* 0.4 * 0.5 */
+	}
+	100% {
+		transform: translate(-50%, -50%) scale(2.5);
+		opacity: 0;
+	}
+}
+
+.redirect-decorator.accent-colored.dimmed {
+	animation: pulse-redirect-accent-dimmed 2s infinite;
+}
+
+.redirect-decorator.accent-colored.dimmed::before {
+	animation: pulse-ring-redirect-accent-dimmed 2s infinite;
+}
+
+.nav-file-title:hover .redirect-decorator.accent-colored.dimmed {
+	animation: pulse-redirect 2s infinite;
+	opacity: 0.8;
+}
+
+.nav-file-title:hover .redirect-decorator.accent-colored.dimmed::before {
+	animation: pulse-ring-redirect 2s infinite;
+	opacity: 0.5;
+}
+
+.nav-file-title:hover .redirect-decorator.accent-colored {
 	animation-duration: 1s;
 }

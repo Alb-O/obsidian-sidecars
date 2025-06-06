@@ -27,7 +27,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		if (plugin.settings.prependPeriodToExtTags) {
 			Array.from(el.querySelectorAll('.nav-file-tag')).forEach((tag) => tag.classList.add('sidecar-prepend-dot'));
 		}
-
 		if (isSidecar) {
 			// 1. Set draggable attribute based on settings
 			if (plugin.settings.preventDraggingSidecars) {
@@ -55,6 +54,38 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 							: sourceFileName;
 					// Append base name as text
 					innerContentEl.appendChild(document.createTextNode(baseName));
+				}
+			}
+
+			// Add redirect decorator to sidecar if enabled and main file has redirect
+			if (plugin.settings.showRedirectDecoratorOnSidecars && plugin.sidecarMainFileHasRedirect(dataPath)) {
+				const titleEl = el.querySelector('.tree-item-inner');
+				if (titleEl) {
+					// Remove any existing redirect decorator
+					const existingDecorator = el.querySelector('.redirect-decorator');
+					if (existingDecorator) {
+						existingDecorator.remove();
+					}					// Add the redirect decorator icon at the beginning
+					const decoratorEl = document.createElement('span');
+					decoratorEl.className = 'redirect-decorator';
+					// Apply dimming if sidecar dimming is enabled
+					if (plugin.settings.dimSidecarsInExplorer) {
+						decoratorEl.classList.add('dimmed');
+					}
+					// Apply accent color if sidecar coloring is enabled
+					if (plugin.settings.colorSidecarExtension) {
+						decoratorEl.classList.add('accent-colored');
+					}
+					decoratorEl.title = 'Main file has a redirect file';
+					
+					// Insert the decorator before the existing content
+					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
+				}
+			} else {
+				// Remove redirect decorator if setting is disabled or redirect file is gone
+				const existingDecorator = el.querySelector('.redirect-decorator');
+				if (existingDecorator) {
+					existingDecorator.remove();
 				}
 			}
 
@@ -264,6 +295,14 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 										processNavItem(el);
 									}
 								}
+							});
+					}
+
+					// Also refresh sidecar files if decorator on sidecars is enabled
+					if (plugin.settings.showRedirectDecoratorOnSidecars) {
+						document.querySelectorAll('.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"]')
+							.forEach((el) => {
+								if (el instanceof HTMLElement) processNavItem(el);
 							});
 					}
 				}
