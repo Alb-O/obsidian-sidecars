@@ -30,23 +30,6 @@ After installing, open the plugin settings and configure which file types you'd 
 
 ## Debugging
 
-To troubleshoot issues with the Sidecars plugin, you can enable debug logging:
+In Devloper Console, run `window.DEBUG.enable('sidecars')`
 
-### Quick Setup
-1. Open Developer Console (`Ctrl+Shift+I` or `Cmd+Option+I`)
-2. Run:
-
-```javascript
-window.DEBUG.enable('sidecars')
-```
-
-You should see `[sidecars]` messages in the console when:
-- Creating or deleting sidecar files
-- Renaming files with sidecars
-- Plugin encounters issues
-
-### Disable Debug
-
-```javascript
-window.DEBUG.disable('sidecars')
-```
+To learn more, see [obsidian-logger](https://github.com/AMC-Albert/obsidian-logger).
