@@ -1,4 +1,4 @@
-import { sidecarLog, sidecarWarn } from './settings';
+import { sidecarDebug, sidecarWarn } from './debug';
 import { Notice, Plugin, TFile, FileView } from 'obsidian';
 import { AddFiletypeModal } from './modals/AddFiletypeModal';
 import { OrphanSidecarModal } from './modals/OrphanSidecarModal';
@@ -260,19 +260,19 @@ async revalidateSidecars() {
 						if (sidecarFileToDelete instanceof TFile) {
 							await this.app.fileManager.trashFile(sidecarFileToDelete);
 							deletedOrphanCount++;
-							sidecarLog(`Sidecar Plugin: Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
+							sidecarDebug(`Sidecar Plugin: Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
 						}
 					} catch (error) {
 						console.error(`Sidecar Plugin: Error deleting orphan sidecar ${orphanPath}: `, error);
 					}
 				}
-				sidecarLog(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
+				sidecarDebug(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
 				new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 				resolve();
 			}).open();
 		});
 	} else {
-		sidecarLog(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
+		sidecarDebug(`Sidecar Plugin: Revalidation complete. Newly created sidecars: ${newlyCreatedSidecarCount}, Monitored files with sidecars: ${countMonitoredFilesWithSidecars}, Deleted orphans: ${deletedOrphanCount}`);
 		new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
 	}
 }

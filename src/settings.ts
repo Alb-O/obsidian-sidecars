@@ -1,16 +1,3 @@
-// Logging utility for gating logs behind environment flag
-function detectDevelopment() {
-	try {
-		// @ts-ignore
-		return typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production';
-	} catch {
-		return false;
-	}
-}
-export const isDevelopment = detectDevelopment();
-export function sidecarLog(...args: any[]) { if (isDevelopment) console.log(...args); }
-export function sidecarWarn(...args: any[]) { if (isDevelopment) console.warn(...args); }
-
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import { ConfirmResetModal } from './modals/ConfirmResetModal';
 import { ConfirmDeleteAllSidecarsModal } from './modals/ConfirmDeleteAllSidecarsModal';

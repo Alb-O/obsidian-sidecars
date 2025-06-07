@@ -27,3 +27,21 @@ After installing, open the plugin settings and configure which file types you'd 
 
 - **Advanced:**
   - Integration with my (WIP) Blender plugin '[Blend Vault](https://github.com/AMC-Albert/blend_vault_ext)' to automatically manage linked relationships between Blend files.
+
+## Debugging
+
+To troubleshoot issues with the Sidecars plugin, you can enable debug logging:
+
+### Quick Setup
+1. Open Developer Console (`Ctrl+Shift+I` or `Cmd+Option+I`)
+2. Run: `window.DEBUG.enable('sidecars')`
+
+You should see `[sidecars]` messages in the console when:
+- Creating or deleting sidecar files
+- Renaming files with sidecars
+- Plugin encounters issues
+
+### Disable Debug
+```javascript
+window.DEBUG.disable('sidecars')
+```
