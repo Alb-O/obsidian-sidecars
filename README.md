@@ -34,7 +34,11 @@ To troubleshoot issues with the Sidecars plugin, you can enable debug logging:
 
 ### Quick Setup
 1. Open Developer Console (`Ctrl+Shift+I` or `Cmd+Option+I`)
-2. Run: `window.DEBUG.enable('sidecars')`
+2. Run:
+
+```javascript
+window.DEBUG.enable('sidecars')
+```
 
 You should see `[sidecars]` messages in the console when:
 - Creating or deleting sidecar files
@@ -42,6 +46,7 @@ You should see `[sidecars]` messages in the console when:
 - Plugin encounters issues
 
 ### Disable Debug
+
 ```javascript
 window.DEBUG.disable('sidecars')
 ```
