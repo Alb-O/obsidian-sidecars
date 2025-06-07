@@ -1,4 +1,4 @@
-import type { SidecarPluginSettings } from './settings';
+import type { SidecarPluginSettings } from '../settings';
 
 export function getExtension(filePath: string): string {
 	const lastDot = filePath.lastIndexOf('.');
