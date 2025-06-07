@@ -2,18 +2,18 @@
 // Users can enable debug messages by running: window.DEBUG?.enable('sidecars') in the console
 // Or enable Console > Verbose mode to see console.debug() messages
 
-// Global debug controller interface
-declare global {
-	interface Window {
-		DEBUG?: {
-			enable(namespace: string): string;
-			disable(namespace: string): string;
-			enabled(namespace: string): boolean;
-		};
-		testSidecarsDebug?: () => string;
-		_sidecarDebugEnabled?: boolean;
-	}
+// Type-safe window interface extension
+interface SidecarsWindow {
+	DEBUG?: {
+		enable(namespace: string): string;
+		disable(namespace: string): string;
+		enabled(namespace: string): boolean;
+	};
+	_sidecarDebugEnabled?: boolean;
 }
+
+// Type-safe window casting
+type WindowWithSidecars = Window & SidecarsWindow;
 
 // Simple debug namespace implementation
 const DEBUG_NAMESPACE = 'sidecars';
@@ -21,12 +21,12 @@ const DEBUG_NAMESPACE = 'sidecars';
 // Simple flag-based approach for more reliability
 function isDebugEnabledSimple(): boolean {
 	if (typeof window === 'undefined') return false;
-	return !!(window as any)._sidecarDebugEnabled;
+	return !!(window as unknown as WindowWithSidecars)._sidecarDebugEnabled;
 }
 
 function setDebugEnabled(enabled: boolean): void {
 	if (typeof window !== 'undefined') {
-		(window as any)._sidecarDebugEnabled = enabled;
+		(window as unknown as WindowWithSidecars)._sidecarDebugEnabled = enabled;
 	}
 }
 
@@ -34,9 +34,11 @@ function setDebugEnabled(enabled: boolean): void {
 function ensureDebugController() {
 	if (typeof window === 'undefined') return;
 	
+	const typedWindow = window as unknown as WindowWithSidecars;
+	
 	// Create or override the DEBUG controller to ensure it works
-	if (!window.DEBUG) {
-		window.DEBUG = {
+	if (!typedWindow.DEBUG) {
+		typedWindow.DEBUG = {
 			enable: () => '',
 			disable: () => '',
 			enabled: () => false
@@ -44,10 +46,10 @@ function ensureDebugController() {
 	}
 	
 	// Store original methods if they exist
-	const originalEnable = window.DEBUG!.enable;
-	const originalDisable = window.DEBUG!.disable;
-	const originalEnabled = window.DEBUG!.enabled;
-		window.DEBUG!.enable = function(namespace: string): string {
+	const originalEnable = typedWindow.DEBUG!.enable;
+	const originalDisable = typedWindow.DEBUG!.disable;
+	const originalEnabled = typedWindow.DEBUG!.enabled;
+		typedWindow.DEBUG!.enable = function(namespace: string): string {
 		// Handle our namespace
 		if (namespace === DEBUG_NAMESPACE || namespace === '*') {
 			setDebugEnabled(true);
@@ -62,7 +64,7 @@ function ensureDebugController() {
 		
 		return `Debug enabled for namespace: ${namespace}`;
 	};
-		window.DEBUG!.disable = function(namespace: string): string {
+		typedWindow.DEBUG!.disable = function(namespace: string): string {
 		// Handle our namespace
 		if (namespace === DEBUG_NAMESPACE || namespace === '*') {
 			setDebugEnabled(false);
@@ -74,11 +76,10 @@ function ensureDebugController() {
 		if (originalDisable && typeof originalDisable === 'function') {
 			return originalDisable.call(this, namespace);
 		}
-		
 		return `Debug disabled for namespace: ${namespace}`;
 	};
 	
-	window.DEBUG!.enabled = function(namespace: string): boolean {
+	typedWindow.DEBUG!.enabled = function(namespace: string): boolean {
 		// Handle our namespace
 		if (namespace === DEBUG_NAMESPACE) {
 			return isDebugEnabledSimple();
@@ -91,7 +92,7 @@ function ensureDebugController() {
 		if (originalEnabled && typeof originalEnabled === 'function') {
 			return originalEnabled.call(this, namespace);
 		}
-				return false;
+		return false;
 	};
 }
 
@@ -100,16 +101,28 @@ function isDebugEnabled(): boolean {
 	return isDebugEnabledSimple();
 }
 
-// Debug logging functions - use console.debug() so they can be controlled by Console settings
+// Debug logging functions with color-coded, bracketless namespaces
 export function sidecarDebug(...args: any[]) {
 	if (isDebugEnabled()) {
-		console.debug(`[${DEBUG_NAMESPACE}]`, ...args);
+		console.debug(`%c${DEBUG_NAMESPACE}`, 'color: #0066cc; font-weight: bold;', ...args);
+	}
+}
+
+export function sidecarInfo(...args: any[]) {
+	if (isDebugEnabled()) {
+		console.info(`%c${DEBUG_NAMESPACE}`, 'color: #0066cc; font-weight: bold;', ...args);
 	}
 }
 
 export function sidecarWarn(...args: any[]) {
 	if (isDebugEnabled()) {
-		console.warn(`[${DEBUG_NAMESPACE}]`, ...args);
+		console.warn(`%c${DEBUG_NAMESPACE}`, 'color: #ff8800; font-weight: bold;', ...args);
+	}
+}
+
+export function sidecarError(...args: any[]) {
+	if (isDebugEnabled()) {
+		console.error(`%c${DEBUG_NAMESPACE}`, 'color: #cc0000; font-weight: bold;', ...args);
 	}
 }
 
