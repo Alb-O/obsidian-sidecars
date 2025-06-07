@@ -1,6 +1,6 @@
 {
 	"name": "sidecars",
-	"version": "0.5.1",
+	"version": "0.5.2",
 	"description": "Automated, user-friendly management of 'sidecar' companion notes for non-markdown files.",
 	"main": "src/main.js",
 	"scripts": {
