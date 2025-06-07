@@ -11,7 +11,8 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === "production");
 
-const context = await esbuild.context({
+// Define base options shared by prod and dev
+let esbuildOptions = {
 	banner: {
 		js: banner,
 	},
@@ -66,11 +67,29 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
-	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",
-	minify: prod,
-});
+};
+
+if (prod) {
+	esbuildOptions = {
+		...esbuildOptions,
+		minifyWhitespace: true,  // Minify whitespace
+		minifySyntax: true,      // Minify syntax
+		minifyIdentifiers: false, // Explicitly DO NOT minify identifiers
+		keepNames: true,          // This should now be effective for names
+		sourcemap: false,         // No sourcemap for production
+	};
+} else { // dev
+	esbuildOptions = {
+		...esbuildOptions,
+		minify: false,        // No minification in dev
+		sourcemap: "inline",  // Inline sourcemap for dev
+		keepNames: true,      // Good to have in dev for consistency
+	};
+}
+
+const context = await esbuild.context(esbuildOptions);
 
 if (prod) {
 	await context.rebuild();
