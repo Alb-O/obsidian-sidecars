@@ -30,6 +30,6 @@ After installing, open the plugin settings and configure which file types you'd 
 
 ## Debugging
 
-In Devloper Console, run `window.DEBUG.enable('sidecars')`
+In Developer Console (`Ctrl+Shift+I`), run `window.DEBUG.enable('sidecars')`
 
 To learn more, see [obsidian-logger](https://github.com/AMC-Albert/obsidian-logger).
