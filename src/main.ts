@@ -1,28 +1,24 @@
 import { debug, warn, info, error, initLogger, registerLoggerClass } from '@/utils';
-import { Notice, Plugin, TFile, FileView, App, WorkspaceLeaf } from 'obsidian';
-import { AddFiletypeModal } from '@/modals/AddFiletypeModal';
+import { Notice, Plugin, TFile } from 'obsidian';
 import { OrphanSidecarModal } from '@/modals/OrphanSidecarModal';
 import { SettingsManager } from '@/settings/SettingsManager';
-import {
-	isMonitoredFileUtil,
-	getSidecarPathUtil,
-	isSidecarFileUtil,
-	getSourcePathFromSidecarUtil,
-	getRedirectPathUtil,
-	isRedirectFileUtil,
-	getSourcePathFromRedirectUtil,
-} from '@/utils';
-import { DEFAULT_SETTINGS, SidecarPluginSettings } from '@/types';
+import { DEFAULT_SETTINGS, SidecarPluginSettings, SidecarPluginInterface } from '@/types';
 import { updateSidecarFileAppearance, updateSidecarCss } from '@/explorer-style';
 import { VaultEventHandler } from '@/events';
 import { SidecarManager } from '@/SidecarManager';
+import { FilePathService, CommandService, MenuService } from '@/services';
 
-export default class SidecarPlugin extends Plugin {
+export default class SidecarPlugin extends Plugin implements SidecarPluginInterface {
 	sidecarAppearanceObserver?: MutationObserver;
 	settings: SidecarPluginSettings;
 	settingsManager: SettingsManager;
 	sidecarManager: SidecarManager;
 	vaultEventHandler: VaultEventHandler;
+	
+	// Services
+	filePathService: FilePathService;
+	commandService: CommandService;
+	menuService: MenuService;
 
 	public isInitialRevalidating = false;
 	public hasFinishedInitialLoad = false;
@@ -43,6 +39,16 @@ export default class SidecarPlugin extends Plugin {
 		await this.settingsManager.loadSettings();
 		this.settings = this.settingsManager.getSettings();
 		
+		// Initialize services
+		this.filePathService = new FilePathService(this.settings);
+		registerLoggerClass(this.filePathService, 'FilePathService');
+		
+		this.commandService = new CommandService(this);
+		registerLoggerClass(this.commandService, 'CommandService');
+		
+		this.menuService = new MenuService(this);
+		registerLoggerClass(this.menuService, 'MenuService');
+		
 		this.isInitialRevalidating = this.settings.revalidateOnStartup;
 		this.hasFinishedInitialLoad = false;
 
@@ -54,57 +60,9 @@ export default class SidecarPlugin extends Plugin {
 
 		this.addSettingTab(this.settingsManager.getSettingTab());
 
-		// Add context menu item to create sidecar for file
-		this.registerEvent(
-			this.app.workspace.on('file-menu', (menu, file) => {
-				if (file instanceof TFile && !this.isSidecarFile(file.path)) {
-					menu.addItem((item) => {
-						item.setTitle('Create sidecar for file')
-							.setIcon('file-plus-2')
-							.setSection('action')
-							.onClick(async () => {
-								const ext = file.extension.toLowerCase();
-								const monitored = this.settings.monitoredExtensions.map((e: string) => e.toLowerCase());
-								if (!monitored.includes(ext)) {
-									new AddFiletypeModal(this.app, ext, async (newExt: string) => {
-										if (!this.settings.monitoredExtensions.map((e: string) => e.toLowerCase()).includes(newExt)) {
-											this.settings.monitoredExtensions.push(newExt);
-											await this.saveSettings();
-											new Notice(`Added .${newExt} to monitored file types.`);
-										}
-										await handleCreateSidecarForFile.call(this, file);
-									}).open();
-								} else {
-									await handleCreateSidecarForFile.call(this, file);
-								}
-							});
-					});
-				}				async function handleCreateSidecarForFile(this: SidecarPlugin, file: TFile) {					const sidecarPath = this.getSidecarPath(file.path);
-					const existing = this.app.vault.getAbstractFileByPath(sidecarPath);
-					if (!existing) {
-						await this.sidecarManager.createSidecarForFile(file, true);
-					}
-					const maybeFile = this.app.vault.getAbstractFileByPath(sidecarPath);
-					if (maybeFile instanceof TFile) {
-						let foundLeaf: WorkspaceLeaf | null = null;
-						this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
-							if (leaf.view instanceof FileView && leaf.view.file && leaf.view.file.path === maybeFile.path) {
-								foundLeaf = leaf;
-							}
-						});
-						if (foundLeaf) {
-							this.app.workspace.setActiveLeaf(foundLeaf, { focus: true });						} else {
-							const leaf = this.app.workspace.getLeaf(true);
-							await leaf.openFile(maybeFile);
-							this.app.workspace.setActiveLeaf(leaf, { focus: true });
-						}
-					}
-					if (existing) {
-						new Notice('Sidecar already exists for this file.');
-					}
-				}
-			})
-		);
+		// Register services
+		this.commandService.registerCommands();
+		this.menuService.registerMenuHandlers();
 		this.app.workspace.onLayoutReady(async () => {
 			setTimeout(() => {
 				this.updateSidecarCss();
@@ -125,7 +83,8 @@ export default class SidecarPlugin extends Plugin {
 				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad && file instanceof TFile) {
 					this.vaultEventHandler.handleFileRename(file, oldPath);
 				}
-			}));			if (this.settings.revalidateOnStartup) {
+			}));
+			if (this.settings.revalidateOnStartup) {
 				debug(this, 'Starting initial revalidation');
 				this.isInitialRevalidating = true;
 				try {
@@ -136,20 +95,13 @@ export default class SidecarPlugin extends Plugin {
 					this.isInitialRevalidating = false;
 					this.hasFinishedInitialLoad = true;
 					debug(this, 'Initial revalidation completed');
-				}
-			} else {
+				}			} else {
 				this.hasFinishedInitialLoad = true;
 				debug(this, 'Skipped initial revalidation, plugin ready');
 			}
 		});
 
-		this.addCommand({
-			id: 'revalidate-sidecars',
-			name: 'Revalidate all sidecars',
-			callback: () => {
-				this.revalidateSidecars();
-			},
-		});
+		debug(this, 'Plugin loading completed');
 	}
 	onunload() {
 		debug(this, 'Plugin unloading');
@@ -157,10 +109,12 @@ export default class SidecarPlugin extends Plugin {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
 		}
-	}
-	async saveSettings(refreshStyles: boolean = true): Promise<void> {
+	}	async saveSettings(refreshStyles: boolean = true): Promise<void> {
 		debug(this, 'Saving settings', { refreshStyles });
 		await this.settingsManager.saveSettings();
+		
+		// Update service settings
+		this.filePathService.updateSettings(this.settings);
 		
 		if (refreshStyles) {
 			this.updateSidecarCss();
@@ -199,33 +153,36 @@ export default class SidecarPlugin extends Plugin {
 		debug(this, 'Starting sidecar revalidation');
 		await this.sidecarManager.revalidateAllSidecars();
 	}
+	
+	// Delegate to FilePathService
 	isMonitoredFile(filePath: string): boolean {
-		return isMonitoredFileUtil(filePath, this.settings, (fp: string) => {
-			return this.isSidecarFile(fp);
+		return this.filePathService.isMonitoredFile(filePath, (fp: string) => {
+			return this.filePathService.isDerivativeFile(fp);
 		});
 	}
 
 	getSidecarPath(filePath: string): string {
-		return getSidecarPathUtil(filePath, this.settings);
+		return this.filePathService.getSidecarPath(filePath);
 	}
 
 	isSidecarFile(filePath: string): boolean {
-		return isSidecarFileUtil(filePath, this.settings);
+		return this.filePathService.isSidecarFile(filePath);
 	}
+	
 	getSourcePathFromSidecar(sidecarPath: string): string | null {
-		return getSourcePathFromSidecarUtil(sidecarPath, this.settings);
+		return this.filePathService.getSourcePathFromSidecar(sidecarPath);
 	}
 
 	getRedirectPath(filePath: string): string {
-		return getRedirectPathUtil(filePath, this.settings);
+		return this.filePathService.getRedirectPath(filePath);
 	}
 
 	isRedirectFile(filePath: string): boolean {
-		return isRedirectFileUtil(filePath, this.settings);
+		return this.filePathService.isRedirectFile(filePath);
 	}
 
 	getSourcePathFromRedirect(redirectPath: string): string | null {
-		return getSourcePathFromRedirectUtil(redirectPath, this.settings);
+		return this.filePathService.getSourcePathFromRedirect(redirectPath);
 	}
 	hasRedirectFile(filePath: string): boolean {
 		const redirectPath = this.getRedirectPath(filePath);
