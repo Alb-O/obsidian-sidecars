@@ -8,3 +8,6 @@ export { DEFAULT_SETTINGS } from '@/types';
 
 // Export services for potential external use
 export type { FilePathService, CommandService, MenuService } from '@/services';
+
+// Export modals for external use
+export * from '@/modals';

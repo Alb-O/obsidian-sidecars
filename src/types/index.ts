@@ -51,8 +51,7 @@ export interface SidecarPluginSettings {
 	showRedirectDecorator: boolean;
 	showRedirectDecoratorOnSidecars: boolean;
 	autoCreateSidecars: boolean;
-	prependPeriodToExtTags: boolean;
-	hideSidecarBaseNameInExplorer?: boolean;
+	hideSidecarBaseNameInExplorer: boolean;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -74,7 +73,6 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	showRedirectDecorator: true,
 	showRedirectDecoratorOnSidecars: false,
 	autoCreateSidecars: true,
-	prependPeriodToExtTags: false,
 	hideSidecarBaseNameInExplorer: false,
 };
 
@@ -86,6 +84,7 @@ export interface PluginWithSettings extends Plugin {
 	saveData(data: any): Promise<void>;
 	saveSettings(): Promise<void>;
 	revalidateSidecars(): Promise<void>;
+	isSidecarFile(filePath: string): boolean;
 }
 
 // Re-export Obsidian types for convenience

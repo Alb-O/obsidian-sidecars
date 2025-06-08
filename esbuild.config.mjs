@@ -55,8 +55,8 @@ let esbuildOptions = {
 if (prod) {
 	esbuildOptions = {
 		...esbuildOptions,
-		minifyWhitespace: true,  // Minify whitespace
-		minifySyntax: true,      // Minify syntax
+		minifyWhitespace: true,   // Minify whitespace
+		minifySyntax: true,       // Minify syntax
 		minifyIdentifiers: false, // Explicitly DO NOT minify identifiers
 		keepNames: true,          // This should now be effective for names
 		sourcemap: false,         // No sourcemap for production

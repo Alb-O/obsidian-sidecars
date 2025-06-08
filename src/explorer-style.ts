@@ -21,12 +21,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		// Remove any existing extension tags inside nav-file-title
 		Array.from(el.querySelectorAll('.main-ext-tag, .sidecar-tag, .redirect-tag')).forEach((tag) => tag.remove());
 
-		// Remove prepend-dot class from all tags first (in case of toggle)
-		Array.from(el.querySelectorAll('.nav-file-tag')).forEach((tag) => tag.classList.remove('sidecar-prepend-dot'));
-		// If enabled, add to ALL nav-file-tag elements (not just sidecar/redirect/main-ext)
-		if (plugin.settings.prependPeriodToExtTags) {
-			Array.from(el.querySelectorAll('.nav-file-tag')).forEach((tag) => tag.classList.add('sidecar-prepend-dot'));
-		}
 		if (isSidecar) {
 			// 1. Set draggable attribute based on settings
 			if (plugin.settings.preventDraggingSidecars) {
@@ -99,7 +93,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					const mainExtTag = document.createElement("div");
 					mainExtTag.className = "nav-file-tag main-ext-tag";
 					mainExtTag.textContent = mainExt.toUpperCase();
-					if (plugin.settings.prependPeriodToExtTags) mainExtTag.classList.add('sidecar-prepend-dot');
 					el.appendChild(mainExtTag);
 				}
 			}
@@ -111,7 +104,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				classList += " dimmed";
 			if (plugin.settings.colorSidecarExtension === false)
 				classList += " no-color";
-			if (plugin.settings.prependPeriodToExtTags) classList += " sidecar-prepend-dot";
 			sidecarTagEl.className = classList;
 			sidecarTagEl.textContent = plugin.settings.sidecarSuffix + (plugin.settings.showMdInSidecarTag ? ".md" : "");
 			el.appendChild(sidecarTagEl);
@@ -154,7 +146,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					const mainExtTag = document.createElement("div");
 					mainExtTag.className = "nav-file-tag main-ext-tag";
 					mainExtTag.textContent = mainExt.toUpperCase();
-					if (plugin.settings.prependPeriodToExtTags) mainExtTag.classList.add('sidecar-prepend-dot');
 					el.appendChild(mainExtTag);
 				}
 			}
@@ -165,7 +156,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				classList += " dimmed";
 			if (plugin.settings.colorSidecarExtension === false)
 				classList += " no-color";
-			if (plugin.settings.prependPeriodToExtTags) classList += " sidecar-prepend-dot";
 			redirectTagEl.className = classList;
 			redirectTagEl.textContent = plugin.settings.redirectFileSuffix + (plugin.settings.showMdInSidecarTag ? ".md" : "");
 			el.appendChild(redirectTagEl);
