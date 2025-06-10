@@ -111,10 +111,8 @@ export class FilePathService {
 	 * Check if a file is a preview file
 	 */
 	isPreviewFile(filePath: string): boolean {
-		// Preview files follow pattern: originalname.preview.extension
-		const previewPattern = new RegExp(`\\.${this.settings.previewFileSuffix}\\.[^.]+$`);
-		const isPreview = previewPattern.test(filePath);
-		loggerDebug(this, 'Checking if file is preview', { filePath, isPreview });
+		const isPreview = filePath.includes(`.${this.settings.previewFileSuffix}.`);
+		// loggerDebug(this, 'Checking if file is preview', { filePath, isPreview }); // Reduced log noise
 		return isPreview;
 	}
 
@@ -148,13 +146,35 @@ export class FilePathService {
 	}
 
 	/**
+	 * Get preview file info from a preview file path
+	 */
+	getPreviewFileInfo(filePath: string): { mainPath: string; extension: string } | null {
+		if (!this.isPreviewFile(filePath)) {
+			return null;
+		}
+		const mainPath = this.getSourcePathFromPreview(filePath);
+		if (!mainPath) {
+			return null;
+		}
+		const extension = this.getFileExtension(filePath);
+		return { mainPath, extension };
+	}
+
+	/**
+	 * Get main file path from redirect file path
+	 */
+	getMainPathFromRedirect(redirectPath: string): string | null {
+		return this.getSourcePathFromRedirect(redirectPath);
+	}
+
+	/**
 	 * Generate preview file path for a source file
 	 */
 	getPreviewPath(filePath: string, extension: string = 'png'): string {
-		// Remove any existing extension from the source file
-		const withoutExt = filePath.replace(/\.[^.]+$/, '');
-		const previewPath = `${withoutExt}.${this.settings.previewFileSuffix}.${extension}`;
-		loggerDebug(this, 'Generated preview path', { filePath, extension, previewPath });
+		// Remove the last extension from the source file
+		const basePath = filePath.replace(/\.[^.]+$/, '');
+		const previewPath = `${basePath}.${this.settings.previewFileSuffix}.${extension}`;
+		// loggerDebug(this, 'Generated preview path', { filePath, extension, previewPath }); // Removed verbose logging
 		return previewPath;
 	}
 

@@ -451,123 +451,89 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 						await this.plugin.settingsManager.updateSetting('hideSidecarBaseNameInExplorer', value);
 					});
 			});
+		// Create a details element for Blend Vault integration
+		const blendVaultDetails = containerEl.createEl('details', { cls: 'setting-item setting-item-heading setting-collapsible' });
+		const blendVaultSummaryEl = blendVaultDetails.createEl('summary');
 
-		new Setting(containerEl).setName('Redirect files (Blend Vault integration)').setHeading()
-			.setDesc((() => {
-				const frag = document.createDocumentFragment();
-				frag.appendText('Only relevant if you use the ');
-				const link = frag.createEl('span', { text: 'Blend Vault', cls: 'external-link' });
-				link.onclick = () => {
-					window.open('https://github.com/AMC-Albert/blend-vault', '_blank');
-				};
-				frag.appendText(' addon for Blender, or other tools that care about redirect files.');
-				return frag;
-			})());
+		// Add title directly to the summary element
+		blendVaultSummaryEl.createSpan({ text: 'Blend Vault integration', cls: 'setting-item-name' });
 
-		new Setting(containerEl)
+		// Add description below the title, still within the summary
+		const blendVaultDesc = blendVaultSummaryEl.createDiv({ cls: 'setting-item-description' });
+		const descFrag = document.createDocumentFragment();
+		descFrag.appendText('Only relevant if you use the ');
+		const link = descFrag.createEl('span', { text: 'Blend Vault', cls: 'external-link' });
+		link.onclick = () => {
+			window.open('https://github.com/AMC-Albert/blend-vault', '_blank');
+		};
+		descFrag.appendText(' addon for Blender, or other tools that care about redirect files or preview files.');
+		blendVaultDesc.appendChild(descFrag);
+
+		const blendVaultContainer = blendVaultDetails.createDiv();
+
+		new Setting(blendVaultContainer).setName('Redirect files').setHeading();
+
+		new Setting(blendVaultContainer)
 			.setName('Redirect file suffix')
 			.setDesc('The suffix for redirect files. Don\'t include periods or the .md extension.')
 			.addText(text => {
 				text.setPlaceholder('redirect')
-					.setValue(this.plugin.settings.redirectFileSuffix);
-
-				const validateAndSaveRedirectSuffix = async () => {
-					const currentValue = text.inputEl.value.trim();
-					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
-						if (this.plugin.settings.redirectFileSuffix !== currentValue) {
-							await this.plugin.settingsManager.updateSetting('redirectFileSuffix', currentValue);
-						}
-						text.inputEl.removeClass('sidecar-setting-error');
-					} else if (currentValue.length > 0) { // Only show error if not empty but invalid
-						text.inputEl.addClass('sidecar-setting-error');
-						new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
-					} else { // Is empty
-						text.inputEl.addClass('sidecar-setting-error');
-						new Notice('Suffix cannot be empty.', 3000);
-					}
-				}; 
-				text.inputEl.onblur = validateAndSaveRedirectSuffix; // Save on blur
-				text.inputEl.onkeydown = (event) => { // Save on Enter
-					if (event.key === 'Enter') {
-						event.preventDefault();
-						validateAndSaveRedirectSuffix();
-					}
-				};
+					.setValue(this.plugin.settings.redirectFileSuffix ?? '.redirect');
+				text.inputEl.addEventListener('blur', async () => {
+					await this.plugin.settingsManager.updateSetting('redirectFileSuffix', text.getValue());
+				});
 			});
 
-		new Setting(containerEl)
+		new Setting(blendVaultContainer)
 			.setName('Hide redirect files')
 			.setDesc('Completely hide redirect files in Obsidian\'s File Explorer.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.hideRedirectFilesInExplorer)
 				.onChange(async (value) => {
 					await this.plugin.settingsManager.updateSetting('hideRedirectFilesInExplorer', value);
+					this.plugin.app.workspace.trigger('css-change');
 				}));
 
-		new Setting(containerEl)
+		new Setting(blendVaultContainer)
 			.setName('Show redirect file decorator')
 			.setDesc('Show a decorator icon at the beginning of file names when a redirect file exists for that file.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showRedirectDecorator)
 				.onChange(async (value) => {
 					await this.plugin.settingsManager.updateSetting('showRedirectDecorator', value);
+					this.plugin.app.workspace.trigger('css-change');
 				}));
-		new Setting(containerEl)
+		new Setting(blendVaultContainer)
 			.setName('Show redirect decorator on sidecars')
 			.setDesc('Also show the redirect decorator on sidecar files themselves when their main file has a redirect file.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showRedirectDecoratorOnSidecars)
 				.onChange(async (value) => {
 					await this.plugin.settingsManager.updateSetting('showRedirectDecoratorOnSidecars', value);
+					this.plugin.app.workspace.trigger('css-change');
 				}));
 
-		new Setting(containerEl).setName('Preview files').setHeading()
-			.setDesc((() => {
-				const frag = document.createDocumentFragment();
-				frag.appendText('Preview files are additional files that preview the content of your main files (e.g., ');
-				frag.appendChild(document.createElement('code')).textContent = 'file.blend.preview.png';
-				frag.appendText('). These files can have any extension and are automatically recognized by the plugin.');
-				return frag;
-			})());
+		new Setting(blendVaultContainer).setName('Preview files').setHeading();
 
-		new Setting(containerEl)
+		new Setting(blendVaultContainer)
 			.setName('Preview file suffix')
 			.setDesc('The suffix for preview files. Don\'t include periods or file extensions.')
 			.addText(text => {
 				text.setPlaceholder('preview')
-					.setValue(this.plugin.settings.previewFileSuffix);
-
-				const validateAndSavePreviewSuffix = async () => {
-					const currentValue = text.inputEl.value.trim();
-					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
-						if (this.plugin.settings.previewFileSuffix !== currentValue) {
-							await this.plugin.settingsManager.updateSetting('previewFileSuffix', currentValue);
-						}
-						text.inputEl.removeClass('sidecar-setting-error');
-					} else if (currentValue.length > 0) { // Only show error if not empty but invalid
-						text.inputEl.addClass('sidecar-setting-error');
-						new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
-					} else { // Is empty
-						text.inputEl.addClass('sidecar-setting-error');
-						new Notice('Suffix cannot be empty.', 3000);
-					}
-				}; 
-				text.inputEl.onblur = validateAndSavePreviewSuffix; // Save on blur
-				text.inputEl.onkeydown = (event) => { // Save on Enter
-					if (event.key === 'Enter') {
-						event.preventDefault();
-						validateAndSavePreviewSuffix();
-					}
-				};
+					.setValue(this.plugin.settings.previewFileSuffix ?? '.preview');
+				text.inputEl.addEventListener('blur', async () => {
+					await this.plugin.settingsManager.updateSetting('previewFileSuffix', text.getValue());
+				});
 			});
 
-		new Setting(containerEl)
+		new Setting(blendVaultContainer)
 			.setName('Hide preview files')
 			.setDesc('Completely hide preview files in Obsidian\'s File Explorer.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.hidePreviewFilesInExplorer)
 				.onChange(async (value) => {
 					await this.plugin.settingsManager.updateSetting('hidePreviewFilesInExplorer', value);
+					this.plugin.app.workspace.trigger('css-change');
 				}));
 
 		new Setting(containerEl).setName("Danger zone").setHeading();

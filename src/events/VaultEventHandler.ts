@@ -7,37 +7,12 @@ export class VaultEventHandler {
 	private plugin: SidecarPlugin;
 	private app: App;
 	private sidecarManager: SidecarManager;
-
 	constructor(plugin: SidecarPlugin, sidecarManager: SidecarManager) {
 		this.plugin = plugin;
 		this.app = plugin.app;
 		this.sidecarManager = sidecarManager;
 	}
 
-	initialize() {
-		loggerDebug(this, 'Setting up vault event listeners - monitoring file system changes');
-		
-		loggerDebug(this, 'Registering file creation event handler');
-		this.plugin.registerEvent(
-			this.plugin.app.vault.on('create', this.handleFileCreate.bind(this))
-		);
-
-		loggerDebug(this, 'Registering file deletion event handler');
-		this.plugin.registerEvent(
-			this.plugin.app.vault.on('delete', this.handleFileDelete.bind(this))
-		);
-
-		loggerDebug(this, 'Registering file rename event handler');
-		this.plugin.registerEvent(
-			this.plugin.app.vault.on('rename', this.handleFileRename.bind(this))
-		);
-
-		loggerDebug(this, 'Vault event handler fully initialized - all file system events monitored');
-	}
-
-	cleanup() {
-		loggerDebug(this, 'Cleaning up vault event handler - Obsidian will auto-unregister events');
-	}
 	async renameSidecarMainFile(oldSidecarPath: string, newSidecarPath: string): Promise<void> {
 		loggerDebug(this, 'Processing sidecar rename - determining main file paths', { oldSidecarPath, newSidecarPath });
 
@@ -205,6 +180,9 @@ export class VaultEventHandler {
 
 			if (extensionWasReapplied) {
 				loggerDebug(this, 'Extension was reapplied - updating UI and completing rename handling');
+				// After extension reapplication, also rename preview files
+				loggerDebug(this, 'Processing preview file rename after extension reapplication', { oldPath, newPath });
+				await this.sidecarManager.handlePreviewRename(oldPath, newPath);
 				this.plugin.updateSidecarFileAppearance();
 				return;
 			}
@@ -227,7 +205,11 @@ export class VaultEventHandler {
 			}
 
 			loggerDebug(this, 'Renamed file is a main file - processing main file rename logic');
+			// Rename associated sidecar file
 			await this.sidecarManager.handleSidecarRename(file, oldPath, newPath);
+			// Also rename associated preview files
+			loggerDebug(this, 'Processing preview file rename after main file rename', { oldPath, newPath });
+			await this.sidecarManager.handlePreviewRename(oldPath, newPath);
 
 			loggerDebug(this, 'Updating sidecar appearance after main file rename');
 			this.plugin.updateSidecarFileAppearance();
