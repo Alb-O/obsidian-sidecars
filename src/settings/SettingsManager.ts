@@ -13,17 +13,13 @@ export class SettingsManager {
 		this.settings = DEFAULT_SETTINGS;
 	}
 	async loadSettings(): Promise<void> {
-		loggerDebug(this, 'Loading plugin settings from data.json');
 		const loadedData = await this.plugin.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 		this.plugin.settings = this.settings; // Ensure plugin settings reference is updated
-		loggerDebug(this, 'Settings loaded successfully', { settingsCount: Object.keys(this.settings).length });
 	}
 
 	async saveSettings(): Promise<void> {
-		loggerDebug(this, 'Saving plugin settings to data.json');
 		await this.plugin.saveData(this.settings);
-		loggerDebug(this, 'Settings saved successfully');
 	}
 
 	getSettings(): SidecarPluginSettings {
@@ -34,19 +30,15 @@ export class SettingsManager {
 	}
 
 	async initialize() {
-		loggerDebug(this, 'Initializing settings manager - preparing UI components');
 		
-		loggerDebug(this, 'Registering settings tab with Obsidian app');
 		this.plugin.addSettingTab(new SidecarPluginSettingTab(this.plugin.app, this.plugin));
 		
-		loggerDebug(this, 'Settings manager fully initialized and ready for user interactions');
 	}
 
 	async updateSetting<K extends keyof SidecarPluginSettings>(
 		key: K, 
 		value: SidecarPluginSettings[K]
 	): Promise<void> {
-		loggerDebug(this, `Updating setting: ${String(key)}`, { oldValue: this.settings[key], newValue: value });
 		
 		// Validate setting value before applying
 		if (key === 'sidecarSuffix' && typeof value === 'string' && value.length > 20) {
@@ -60,9 +52,7 @@ export class SettingsManager {
 			this.settings[key] = value;
 			this.plugin.settings[key] = value;
 			
-			loggerDebug(this, 'Persisting updated settings and refreshing UI');
 			await this.plugin.saveSettings();
-			loggerDebug(this, 'Setting update completed successfully');
 			
 			loggerInfo(this, 'Setting successfully updated', { 
 				key: String(key), 
@@ -88,13 +78,10 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		loggerDebug(this, 'Rendering settings tab UI - building comprehensive user interface');
 		const { containerEl } = this;
 
-		loggerDebug(this, 'Clearing existing settings container content');
 		containerEl.empty();
 
-		loggerDebug(this, 'Creating sidecar suffix setting');
 		new Setting(containerEl)
 			.setName('Sidecar file suffix')
 			.setDesc('The suffix to use for sidecar files. Don\'t include periods or the .md extension.')
@@ -107,7 +94,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md')) {
 						// Only save if the value has actually changed from the last saved valid state
 						if (this.plugin.settings.sidecarSuffix !== currentValue) {
-							loggerDebug(this, 'User modified sidecar suffix', { newValue: currentValue });
 							await this.plugin.settingsManager.updateSetting('sidecarSuffix', currentValue);
 							// Update example tags in settings UI
 							const exampleTags = this.containerEl.querySelectorAll('.sidecar-tag-example');
@@ -136,30 +122,25 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				});
 			});
 
-		loggerDebug(this, 'Creating auto-create sidecars toggle');
 		new Setting(containerEl)
 			.setName('Automatically create new sidecars')
 			.setDesc('If enabled, new sidecars will be created automatically for monitored files. If disabled, only existing sidecars will be managed. To manually create sidecars, use the context menu in the File Explorer.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoCreateSidecars)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled auto-create sidecars', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('autoCreateSidecars', value);
 				})
 			);
 
-		loggerDebug(this, 'Creating revalidate on startup toggle');
 		new Setting(containerEl)
 			.setName('Revalidate sidecars on startup')
 			.setDesc('Automatically re-scan all files and manage sidecars when Obsidian starts or the plugin is loaded.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.revalidateOnStartup)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled revalidate on startup', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('revalidateOnStartup', value);
 				}));
 
-		loggerDebug(this, 'Creating manual revalidate button');
 		new Setting(containerEl)
 			.setName('Revalidate sidecars')
 			.setDesc('Manually re-scan all files to create missing sidecars and remove orphaned or invalid ones. This can be useful after bulk file operations or if you suspect inconsistencies.')
@@ -167,15 +148,12 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				.setButtonText('Revalidate now')
 				.setCta()
 				.onClick(() => {
-					loggerDebug(this, 'User triggered manual revalidation');
 					new Notice('Starting sidecar revalidation...');
 					this.plugin.revalidateSidecars();
 				}));
 
-		loggerDebug(this, 'Creating file types section');
 		new Setting(containerEl).setName('File types').setHeading()
 
-		loggerDebug(this, 'Creating image files toggle');
 		new Setting(containerEl)
 			.setName('Manage image files')
 			.setDesc('Create and manage sidecars for image formats supported by Obsidian:')
@@ -194,7 +172,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 					.setValue(false)
 					.onChange(async (value) => {
 						if (value) {
-							loggerDebug(this, 'User enabled image file management');
 							const imageExts = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 							const current = new Set(this.plugin.settings.monitoredExtensions.map(e => e.toLowerCase()));
 							let changed = false;
@@ -210,7 +187,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				);
 			});
 
-		loggerDebug(this, 'Creating video files toggle');
 		new Setting(containerEl)
 			.setName('Manage video files')
 			.setDesc('Create and manage sidecars for video formats supported by Obsidian:')
@@ -229,7 +205,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 					.setValue(false)
 					.onChange(async (value) => {
 						if (value) {
-							loggerDebug(this, 'User enabled video file management');
 							const videoExts = ['mkv', 'mov', 'mp4', 'ogv', 'webm'];
 							const current = new Set(this.plugin.settings.monitoredExtensions.map(e => e.toLowerCase()));
 							let changed = false;
@@ -245,7 +220,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				);
 			});
 
-		loggerDebug(this, 'Creating audio files toggle');
 		new Setting(containerEl)
 			.setName('Manage audio files')
 			.setDesc('Create and manage sidecars for audio formats supported by Obsidian:')
@@ -264,7 +238,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 					.setValue(false)
 					.onChange(async (value) => {
 						if (value) {
-							loggerDebug(this, 'User enabled audio file management');
 							const audioExts = ['flac', 'm4a', 'mp3', 'ogg', 'wav', 'webm', '3gp'];
 							const current = new Set(this.plugin.settings.monitoredExtensions.map(e => e.toLowerCase()));
 							let changed = false;
@@ -280,7 +253,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				);
 			});
 
-		loggerDebug(this, 'Creating extra file types setting');
 		new Setting(containerEl)
 			.setName('Extra file types')
 			.setDesc('List extra file types to manage (one per line).')
@@ -292,7 +264,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				textarea.placeholder = 'pdf\ncanvas';
 				textarea.value = this.plugin.settings.monitoredExtensions.join('\n');
 				textarea.addEventListener('change', async () => {
-					loggerDebug(this, 'User modified extra file types');
 					const extensions = textarea.value
 						.split(/\r?\n/)
 						.map(item => item.trim())
@@ -305,33 +276,27 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				setting.controlEl.appendChild(textarea);
 			});
 
-		loggerDebug(this, 'Creating File Explorer behavior section');
 		new Setting(containerEl).setName('File Explorer behavior').setHeading();
 
-		loggerDebug(this, 'Creating prevent dragging toggle');
 		new Setting(containerEl)
 			.setName('Prevent dragging of sidecar files')
 			.setDesc('If enabled, sidecar files cannot be dragged in the File Explorer. This helps prevent accidental moves.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.preventDraggingSidecars)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled prevent dragging sidecars', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('preventDraggingSidecars', value);
 				}));
 
-		loggerDebug(this, 'Creating hide sidecar files toggle');
 		new Setting(containerEl)
 			.setName('Hide sidecar files')
 			.setDesc("Completely hide sidecar files in Obsidian's File Explorer.")
 			.addToggle(toggle => {
 				toggle.setValue(this.plugin.settings.hideSidecarsInExplorer)
 					.onChange(async (value) => {
-						loggerDebug(this, 'User toggled hide sidecars in explorer', { newValue: value });
 						await this.plugin.settingsManager.updateSetting('hideSidecarsInExplorer', value);
 					});
 			});
 
-		loggerDebug(this, 'Creating management scope section');
 		new Setting(containerEl)
 			.setName('Management scope')
 			.setHeading()
@@ -345,7 +310,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				return fragment;
 			})());
 
-		loggerDebug(this, 'Creating blacklist folders setting');
 		new Setting(containerEl)
 			.setName('Blacklist folders')
 			.setDesc('List of folders to exclude from sidecar management. Exclusions take precedence over inclusions when resolving blacklist subfolders inside whitelist folders.')
@@ -355,7 +319,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				textarea.placeholder = '/Templates/\n*/archive/*';
 				textarea.value = (this.plugin.settings.blacklistFolders || []).join('\n');
 				textarea.addEventListener('change', async () => {
-					loggerDebug(this, 'User modified blacklist folders');
 					const folders = textarea.value
 						.split(/\r?\n/)
 						.map(item => item.trim())
@@ -366,7 +329,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				setting.controlEl.appendChild(textarea);
 			});
 
-		loggerDebug(this, 'Creating whitelist folders setting');
 		new Setting(containerEl)
 			.setName('Whitelist folders')
 			.setDesc('List of folders to include for sidecar management. If set to at least one folder, only files in these folders will be managed.')
@@ -376,7 +338,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				textarea.placeholder = '*/attachments/*';
 				textarea.value = (this.plugin.settings.whitelistFolders || []).join('\n');
 				textarea.addEventListener('change', async () => {
-					loggerDebug(this, 'User modified whitelist folders');
 					const folders = textarea.value
 						.split(/\r?\n/)
 						.map(item => item.trim())
@@ -387,7 +348,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				setting.controlEl.appendChild(textarea);
 			});
 
-		loggerDebug(this, 'Creating use regex toggle');
 		new Setting(containerEl)
 			.setName('Use regular expressions for folder lists')
 			.setDesc((() => {
@@ -406,27 +366,22 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.useRegexForFolderLists)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled regex folder patterns', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('useRegexForFolderLists', value);
 				})
 			);
 
-		loggerDebug(this, 'Creating File Explorer styles section');
 		new Setting(containerEl).setName('File Explorer styles').setHeading();
 
-		loggerDebug(this, 'Creating dim sidecar files toggle');
 		new Setting(containerEl)
 			.setName('Dim sidecar files')
 			.setDesc('Visually dim sidecar files in the File Explorer.')
 			.addToggle(toggle => {
 				toggle.setValue(this.plugin.settings.dimSidecarsInExplorer)
 					.onChange(async (value) => {
-						loggerDebug(this, 'User toggled dim sidecars in explorer', { newValue: value });
 						await this.plugin.settingsManager.updateSetting('dimSidecarsInExplorer', value);
 					});
 			});
 
-		loggerDebug(this, 'Creating arrow indicators toggle');
 		new Setting(containerEl)
 			.setName('Arrow indicators')
 			.setDesc((() => {
@@ -439,11 +394,9 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.prependSidecarIndicator)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled arrow indicators', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('prependSidecarIndicator', value);
 				}));
 
-		loggerDebug(this, 'Creating colored sidecar extension toggle');
 		new Setting(containerEl)
 			.setName('Colored sidecar extension')
 			.setDesc((() => {
@@ -459,22 +412,18 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 			.addToggle((toggle) => toggle
 				.setValue(this.plugin.settings.colorSidecarExtension)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled colored sidecar extension', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('colorSidecarExtension', value);
 				}));
 
-		loggerDebug(this, 'Creating show .md in sidecar extension toggle');
 		new Setting(containerEl)
-			.setName('Show .md in sidecar extension')
-			.setDesc('Visually append .md to the sidecar extension tag in the File Explorer (e.g. side.md).')
+			.setName('Append actual file extensions')
+			.setDesc('Visually append the actual file extension (e.g. .md) to sidecars in the File Explorer.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showMdInSidecarTag)
+				.setValue(this.plugin.settings.showActualExtension)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled show .md in sidecar tag', { newValue: value });
-					await this.plugin.settingsManager.updateSetting('showMdInSidecarTag', value);
+					await this.plugin.settingsManager.updateSetting('showActualExtension', value);
 				}));
 
-		loggerDebug(this, 'Creating hide main file extension toggle');
 		new Setting(containerEl)
 			.setName('Hide main file extension')
 			.setDesc((() => {
@@ -490,23 +439,19 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.hideMainExtensionInExplorer)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled hide main extension in explorer', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('hideMainExtensionInExplorer', value);
 				}));
 
-		loggerDebug(this, 'Creating hide base name of sidecar files toggle');
 		new Setting(containerEl)
 			.setName('Hide base name of sidecar files')
 			.setDesc('If enabled, only the extension tags or arrow indicators will be visible for sidecar files. The base file name will be hidden (visual only).')
 			.addToggle(toggle => {
 				toggle.setValue(this.plugin.settings.hideSidecarBaseNameInExplorer ?? false)
 					.onChange(async (value) => {
-						loggerDebug(this, 'User toggled hide sidecar base name in explorer', { newValue: value });
 						await this.plugin.settingsManager.updateSetting('hideSidecarBaseNameInExplorer', value);
 					});
 			});
 
-		loggerDebug(this, 'Creating redirect files section');
 		new Setting(containerEl).setName('Redirect files (Blend Vault integration)').setHeading()
 			.setDesc((() => {
 				const frag = document.createDocumentFragment();
@@ -519,7 +464,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				return frag;
 			})());
 
-		loggerDebug(this, 'Creating redirect file suffix setting');
 		new Setting(containerEl)
 			.setName('Redirect file suffix')
 			.setDesc('The suffix for redirect files. Don\'t include periods or the .md extension.')
@@ -531,7 +475,6 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 					const currentValue = text.inputEl.value.trim();
 					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
 						if (this.plugin.settings.redirectFileSuffix !== currentValue) {
-							loggerDebug(this, 'User modified redirect file suffix', { newValue: currentValue });
 							await this.plugin.settingsManager.updateSetting('redirectFileSuffix', currentValue);
 						}
 						text.inputEl.removeClass('sidecar-setting-error');
@@ -552,52 +495,90 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				};
 			});
 
-		loggerDebug(this, 'Creating hide redirect files toggle');
 		new Setting(containerEl)
 			.setName('Hide redirect files')
 			.setDesc('Completely hide redirect files in Obsidian\'s File Explorer.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.hideRedirectFilesInExplorer)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled hide redirect files in explorer', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('hideRedirectFilesInExplorer', value);
 				}));
 
-		loggerDebug(this, 'Creating show redirect file decorator toggle');
 		new Setting(containerEl)
 			.setName('Show redirect file decorator')
 			.setDesc('Show a decorator icon at the beginning of file names when a redirect file exists for that file.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showRedirectDecorator)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled show redirect decorator', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('showRedirectDecorator', value);
 				}));
-
-		loggerDebug(this, 'Creating show redirect decorator on sidecars toggle');
 		new Setting(containerEl)
 			.setName('Show redirect decorator on sidecars')
 			.setDesc('Also show the redirect decorator on sidecar files themselves when their main file has a redirect file.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.showRedirectDecoratorOnSidecars)
 				.onChange(async (value) => {
-					loggerDebug(this, 'User toggled show redirect decorator on sidecars', { newValue: value });
 					await this.plugin.settingsManager.updateSetting('showRedirectDecoratorOnSidecars', value);
 				}));
 
-		loggerDebug(this, 'Creating danger zone section');
+		new Setting(containerEl).setName('Preview files').setHeading()
+			.setDesc((() => {
+				const frag = document.createDocumentFragment();
+				frag.appendText('Preview files are additional files that preview the content of your main files (e.g., ');
+				frag.appendChild(document.createElement('code')).textContent = 'file.blend.preview.png';
+				frag.appendText('). These files can have any extension and are automatically recognized by the plugin.');
+				return frag;
+			})());
+
+		new Setting(containerEl)
+			.setName('Preview file suffix')
+			.setDesc('The suffix for preview files. Don\'t include periods or file extensions.')
+			.addText(text => {
+				text.setPlaceholder('preview')
+					.setValue(this.plugin.settings.previewFileSuffix);
+
+				const validateAndSavePreviewSuffix = async () => {
+					const currentValue = text.inputEl.value.trim();
+					if (currentValue.length > 0 && !currentValue.includes('.') && !currentValue.toLowerCase().includes('md') && !currentValue.includes(' ')) {
+						if (this.plugin.settings.previewFileSuffix !== currentValue) {
+							await this.plugin.settingsManager.updateSetting('previewFileSuffix', currentValue);
+						}
+						text.inputEl.removeClass('sidecar-setting-error');
+					} else if (currentValue.length > 0) { // Only show error if not empty but invalid
+						text.inputEl.addClass('sidecar-setting-error');
+						new Notice('Invalid suffix: Cannot be empty, contain periods, spaces, or "md".', 4000);
+					} else { // Is empty
+						text.inputEl.addClass('sidecar-setting-error');
+						new Notice('Suffix cannot be empty.', 3000);
+					}
+				}; 
+				text.inputEl.onblur = validateAndSavePreviewSuffix; // Save on blur
+				text.inputEl.onkeydown = (event) => { // Save on Enter
+					if (event.key === 'Enter') {
+						event.preventDefault();
+						validateAndSavePreviewSuffix();
+					}
+				};
+			});
+
+		new Setting(containerEl)
+			.setName('Hide preview files')
+			.setDesc('Completely hide preview files in Obsidian\'s File Explorer.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.hidePreviewFilesInExplorer)
+				.onChange(async (value) => {
+					await this.plugin.settingsManager.updateSetting('hidePreviewFilesInExplorer', value);
+				}));
+
 		new Setting(containerEl).setName("Danger zone").setHeading();
 
-		loggerDebug(this, 'Creating reset settings button');
 		new Setting(containerEl)
 			.setName('Reset all settings')
 			.setDesc('Restore all Sidecar settings to their default values. This cannot be undone.')
 			.addButton((button) => {
 				button.setButtonText('Reset to defaults')
 					.onClick(() => {
-						loggerDebug(this, 'User requested settings reset');
 						new ConfirmResetModal(this.app, async () => {
-							loggerDebug(this, 'Resetting all settings to defaults');
 							Object.assign(this.plugin.settings, DEFAULT_SETTINGS);
 							await this.plugin.saveSettings();
 							new Notice('Sidecar settings reset to defaults.');
@@ -608,16 +589,13 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				button.buttonEl.classList.add('sidecar-reset-destructive-text');
 			});
 
-		loggerDebug(this, 'Creating delete all sidecars button');
 		new Setting(containerEl)
 			.setName('Delete all sidecar files')
 			.setDesc('Delete all sidecar files in this vault. This cannot be undone and will remove all sidecar files managed by this plugin.')
 			.addButton((button) => {
 				button.setButtonText('Delete all sidecars')
 					.onClick(() => {
-						loggerDebug(this, 'User requested deletion of all sidecars');
 						new ConfirmDeleteAllSidecarsModal(this.app, async () => {
-							loggerDebug(this, 'User confirmed deletion of all sidecars');
 							// Find and delete all sidecar files using plugin logic
 							const deleted: string[] = [];
 							const files = this.app.vault.getFiles();
@@ -638,6 +616,5 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 				button.buttonEl.classList.add('sidecar-reset-destructive-text');
 			});
 
-		loggerDebug(this, 'Settings tab UI rendering completed - comprehensive interface ready');
 	}
 }

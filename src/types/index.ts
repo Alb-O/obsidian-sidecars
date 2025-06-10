@@ -10,21 +10,26 @@ export interface SidecarPluginInterface extends Plugin {
 	// Core plugin methods
 	saveSettings(refreshStyles?: boolean): Promise<void>;
 	revalidateSidecars(): Promise<void>;
-	
+
 	// File type checking methods
 	isMonitoredFile(filePath: string): boolean;
 	isSidecarFile(filePath: string): boolean;
 	isRedirectFile(filePath: string): boolean;
+	isPreviewFile(filePath: string): boolean;
 	
 	// Path generation methods
 	getSidecarPath(filePath: string): string;
 	getRedirectPath(filePath: string): string;
+	getPreviewPath(filePath: string, extension?: string): string;
 	getSourcePathFromSidecar(sidecarPath: string): string | null;
 	getSourcePathFromRedirect(redirectPath: string): string | null;
+	getSourcePathFromPreview(previewPath: string): string | null;
 	
 	// Helper methods
 	hasRedirectFile(filePath: string): boolean;
+	hasPreviewFile(filePath: string): boolean;
 	sidecarMainFileHasRedirect(sidecarPath: string): boolean;
+	sidecarMainFileHasPreview(sidecarPath: string): boolean;
 	
 	// UI update methods
 	updateSidecarFileAppearance(): void;
@@ -45,11 +50,14 @@ export interface SidecarPluginSettings {
 	preventDraggingSidecars: boolean;
 	colorSidecarExtension: boolean;
 	hideMainExtensionInExplorer: boolean;
-	showMdInSidecarTag: boolean;
-	redirectFileSuffix: string;
+	showActualExtension: boolean;	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer: boolean;
 	showRedirectDecorator: boolean;
 	showRedirectDecoratorOnSidecars: boolean;
+	previewFileSuffix: string;
+	hidePreviewFilesInExplorer: boolean;
+	showPreviewDecorator: boolean;
+	showPreviewDecoratorOnSidecars: boolean;
 	autoCreateSidecars: boolean;
 	hideSidecarBaseNameInExplorer: boolean;
 }
@@ -67,11 +75,14 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	preventDraggingSidecars: true,
 	colorSidecarExtension: true,
 	hideMainExtensionInExplorer: false,
-	showMdInSidecarTag: false,
-	redirectFileSuffix: 'redirect',
+	showActualExtension: false,	redirectFileSuffix: 'redirect',
 	hideRedirectFilesInExplorer: true,
 	showRedirectDecorator: true,
 	showRedirectDecoratorOnSidecars: false,
+	previewFileSuffix: 'preview',
+	hidePreviewFilesInExplorer: false,
+	showPreviewDecorator: true,
+	showPreviewDecoratorOnSidecars: false,
 	autoCreateSidecars: true,
 	hideSidecarBaseNameInExplorer: false,
 };

@@ -69,6 +69,30 @@
 	opacity: 1;
 }
 
+/* Preview tag styles */
+.nav-file-tag.preview-tag {
+	color: var(--text-accent);
+	opacity: var(--link-unresolved-opacity);
+	display: inline-block;
+}
+
+.nav-file-tag.preview-tag.no-color {
+	color: unset;
+}
+
+.nav-file-tag.preview-tag.dimmed {
+	opacity: var(--link-unresolved-opacity);
+}
+
+.nav-file-tag.preview-tag.dimmed.no-color {
+	opacity: 1;
+}
+
+.nav-file-title:hover .nav-file-tag.preview-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.preview-tag.dimmed {
+	opacity: 1;
+}
+
 /* Main extension tag styles */
 .nav-file-tag.main-ext-tag {
 	display: inline-block;

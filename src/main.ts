@@ -1,4 +1,4 @@
-import { loggerDebug, loggerWarn, initLogger, registerLoggerClass } from '@/utils';
+import { initializeDebugSystem, loggerDebug, loggerWarn, initLogger, registerLoggerClass } from '@/utils';
 import { Notice, Plugin, TFile } from 'obsidian';
 import { OrphanSidecarModal } from '@/modals/OrphanSidecarModal';
 import { SettingsManager } from '@/settings/SettingsManager';
@@ -30,10 +30,9 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		updateSidecarCss(this);
 	}
 	async onload() {
-		loggerDebug(this, 'Plugin loading started');
-		
 		initLogger(this);
 		registerLoggerClass(this, 'SidecarPlugin');
+		
 		this.settingsManager = new SettingsManager(this);
 		registerLoggerClass(this.settingsManager, 'SettingsManager');
 		await this.settingsManager.loadSettings();
@@ -64,10 +63,12 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		this.commandService.registerCommands();
 		this.menuService.registerMenuHandlers();
 		this.app.workspace.onLayoutReady(async () => {
+			initializeDebugSystem();
 			setTimeout(() => {
 				this.updateSidecarCss();
 				this.updateSidecarFileAppearance();
-			}, 200);			this.registerEvent(this.app.vault.on('create', (file) => {
+			}, 200);
+			this.registerEvent(this.app.vault.on('create', (file) => {
 				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad && file instanceof TFile) {
 					this.vaultEventHandler.handleFileCreate(file);
 				}
@@ -181,17 +182,48 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		return this.filePathService.isRedirectFile(filePath);
 	}
 
+	isPreviewFile(filePath: string): boolean {
+		return this.filePathService.isPreviewFile(filePath);
+	}
+
 	getSourcePathFromRedirect(redirectPath: string): string | null {
 		return this.filePathService.getSourcePathFromRedirect(redirectPath);
 	}
+
+	getSourcePathFromPreview(previewPath: string): string | null {
+		return this.filePathService.getSourcePathFromPreview(previewPath);
+	}
+
+	getPreviewPath(filePath: string, extension?: string): string {
+		return this.filePathService.getPreviewPath(filePath, extension);
+	}
+
 	hasRedirectFile(filePath: string): boolean {
 		const redirectPath = this.getRedirectPath(filePath);
 		return this.app.vault.getAbstractFileByPath(redirectPath) !== null;
+	}
+
+	hasPreviewFile(filePath: string): boolean {
+		// Check for common preview extensions
+		const commonPreviewExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+		for (const ext of commonPreviewExts) {
+			const previewPath = this.getPreviewPath(filePath, ext);
+			if (this.app.vault.getAbstractFileByPath(previewPath) !== null) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	sidecarMainFileHasRedirect(sidecarPath: string): boolean {
 		const mainFilePath = this.getSourcePathFromSidecar(sidecarPath);
 		if (!mainFilePath) return false;
 		return this.hasRedirectFile(mainFilePath);
+	}
+
+	sidecarMainFileHasPreview(sidecarPath: string): boolean {
+		const mainFilePath = this.getSourcePathFromSidecar(sidecarPath);
+		if (!mainFilePath) return false;
+		return this.hasPreviewFile(mainFilePath);
 	}
 }

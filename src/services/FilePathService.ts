@@ -97,7 +97,7 @@ export class FilePathService {
 		loggerDebug(this, 'Generated redirect path', { sourcePath, redirectPath });
 		return redirectPath;
 	}
-
+	
 	/**
 	 * Check if a file is a redirect file
 	 */
@@ -105,6 +105,17 @@ export class FilePathService {
 		const isRedirect = filePath.endsWith(`.${this.settings.redirectFileSuffix}.md`);
 		loggerDebug(this, 'Checking if file is redirect', { filePath, isRedirect });
 		return isRedirect;
+	}
+
+	/**
+	 * Check if a file is a preview file
+	 */
+	isPreviewFile(filePath: string): boolean {
+		// Preview files follow pattern: originalname.preview.extension
+		const previewPattern = new RegExp(`\\.${this.settings.previewFileSuffix}\\.[^.]+$`);
+		const isPreview = previewPattern.test(filePath);
+		loggerDebug(this, 'Checking if file is preview', { filePath, isPreview });
+		return isPreview;
 	}
 
 	/**
@@ -122,10 +133,36 @@ export class FilePathService {
 	}
 
 	/**
-	 * Check if a file is any kind of derivative file (sidecar or redirect)
+	 * Extract source file path from preview path
+	 */
+	getSourcePathFromPreview(previewPath: string): string | null {
+		const previewPattern = new RegExp(`\\.${this.settings.previewFileSuffix}\\.[^.]+$`);
+		const match = previewPath.match(previewPattern);
+		if (match) {
+			const sourcePath = previewPath.substring(0, previewPath.length - match[0].length);
+			loggerDebug(this, 'Extracted source path from preview', { previewPath, sourcePath });
+			return sourcePath;
+		}
+		loggerDebug(this, 'Could not extract source path from preview', { previewPath });
+		return null;
+	}
+
+	/**
+	 * Generate preview file path for a source file
+	 */
+	getPreviewPath(filePath: string, extension: string = 'png'): string {
+		// Remove any existing extension from the source file
+		const withoutExt = filePath.replace(/\.[^.]+$/, '');
+		const previewPath = `${withoutExt}.${this.settings.previewFileSuffix}.${extension}`;
+		loggerDebug(this, 'Generated preview path', { filePath, extension, previewPath });
+		return previewPath;
+	}
+
+	/**
+	 * Check if a file is any kind of derivative file (sidecar, redirect, or preview)
 	 */
 	isDerivativeFile(filePath: string): boolean {
-		const isDerivative = this.isSidecarFile(filePath) || this.isRedirectFile(filePath);
+		const isDerivative = this.isSidecarFile(filePath) || this.isRedirectFile(filePath) || this.isPreviewFile(filePath);
 		loggerDebug(this, 'Checking if file is derivative', { filePath, isDerivative });
 		return isDerivative;
 	}
