@@ -1,4 +1,4 @@
-import { debug, warn, info, error, initLogger, registerLoggerClass } from '@/utils';
+import { loggerDebug, loggerWarn, initLogger, registerLoggerClass } from '@/utils';
 import { Notice, Plugin, TFile } from 'obsidian';
 import { OrphanSidecarModal } from '@/modals/OrphanSidecarModal';
 import { SettingsManager } from '@/settings/SettingsManager';
@@ -30,7 +30,7 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		updateSidecarCss(this);
 	}
 	async onload() {
-		debug(this, 'Plugin loading started');
+		loggerDebug(this, 'Plugin loading started');
 		
 		initLogger(this);
 		registerLoggerClass(this, 'SidecarPlugin');
@@ -85,32 +85,32 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 				}
 			}));
 			if (this.settings.revalidateOnStartup) {
-				debug(this, 'Starting initial revalidation');
+				loggerDebug(this, 'Starting initial revalidation');
 				this.isInitialRevalidating = true;
 				try {
 					await this.revalidateSidecars();
 				} catch (error) {
-					warn(this, 'Error during initial revalidation:', error);
+					loggerWarn(this, 'Error during initial revalidation:', error);
 				} finally {
 					this.isInitialRevalidating = false;
 					this.hasFinishedInitialLoad = true;
-					debug(this, 'Initial revalidation completed');
+					loggerDebug(this, 'Initial revalidation completed');
 				}			} else {
 				this.hasFinishedInitialLoad = true;
-				debug(this, 'Skipped initial revalidation, plugin ready');
+				loggerDebug(this, 'Skipped initial revalidation, plugin ready');
 			}
 		});
 
-		debug(this, 'Plugin loading completed');
+		loggerDebug(this, 'Plugin loading completed');
 	}
 	onunload() {
-		debug(this, 'Plugin unloading');
+		loggerDebug(this, 'Plugin unloading');
 		if (this.sidecarAppearanceObserver) {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
 		}
 	}	async saveSettings(refreshStyles: boolean = true): Promise<void> {
-		debug(this, 'Saving settings', { refreshStyles });
+		loggerDebug(this, 'Saving settings', { refreshStyles });
 		await this.settingsManager.saveSettings();
 		
 		// Update service settings
@@ -138,10 +138,10 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 						if (sidecarFileToDelete instanceof TFile) {
 							await this.app.fileManager.trashFile(sidecarFileToDelete);
 							actualDeletedCount++;
-							debug(this, `Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
+							loggerDebug(this, `Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
 						}
 					} catch (err) {
-						warn(this, `Error deleting orphan sidecar ${orphanPath}`, { error: err });
+						loggerWarn(this, `Error deleting orphan sidecar ${orphanPath}`, { error: err });
 					}
 				}
 				postDeletionCallback(actualDeletedCount);
@@ -150,7 +150,7 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		});
 	}
 	async revalidateSidecars(): Promise<void> {
-		debug(this, 'Starting sidecar revalidation');
+		loggerDebug(this, 'Starting sidecar revalidation');
 		await this.sidecarManager.revalidateAllSidecars();
 	}
 	

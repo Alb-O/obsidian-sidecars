@@ -1,5 +1,5 @@
 import { TFile, FileView, WorkspaceLeaf, Notice } from 'obsidian';
-import { debug, info, warn } from '@/utils';
+import { loggerDebug, loggerInfo, loggerWarn } from '@/utils';
 import { AddFiletypeModal } from '@/modals/AddFiletypeModal';
 import type SidecarPlugin from '@/main';
 
@@ -12,14 +12,14 @@ export class MenuService {
 
 	constructor(plugin: SidecarPlugin) {
 		this.plugin = plugin;
-		debug(this, 'MenuService initialized');
+		loggerDebug(this, 'MenuService initialized');
 	}
 
 	/**
 	 * Register all menu handlers
 	 */
 	registerMenuHandlers(): void {
-		debug(this, 'Registering menu handlers');
+		loggerDebug(this, 'Registering menu handlers');
 		this.registerFileMenu();
 	}
 
@@ -27,7 +27,7 @@ export class MenuService {
 	 * Register file context menu handler
 	 */
 	private registerFileMenu(): void {
-		debug(this, 'Registering file menu handler');
+		loggerDebug(this, 'Registering file menu handler');
 		this.plugin.registerEvent(
 			this.plugin.app.workspace.on('file-menu', (menu, file) => {
 				if (file instanceof TFile && !this.plugin.isSidecarFile(file.path)) {
@@ -48,13 +48,13 @@ export class MenuService {
 	 * Handle creating a sidecar for a file, including extension management
 	 */
 	private async handleCreateSidecarForFile(file: TFile): Promise<void> {
-		debug(this, 'Handling create sidecar for file', { path: file.path });
+		loggerDebug(this, 'Handling create sidecar for file', { path: file.path });
 
 		const ext = file.extension.toLowerCase();
 		const monitored = this.plugin.settings.monitoredExtensions.map((e: string) => e.toLowerCase());
 
 		if (!monitored.includes(ext)) {
-			info(this, 'Extension not monitored, showing add filetype modal', { extension: ext });
+			loggerInfo(this, 'Extension not monitored, showing add filetype modal', { extension: ext });
 			await this.showAddFiletypeModal(ext, file);
 		} else {
 			await this.createAndOpenSidecar(file);
@@ -65,7 +65,7 @@ export class MenuService {
 	 * Show modal to add new file type and create sidecar
 	 */
 	private async showAddFiletypeModal(extension: string, file: TFile): Promise<void> {
-		debug(this, 'Showing add filetype modal', { extension });
+		loggerDebug(this, 'Showing add filetype modal', { extension });
 
 		return new Promise((resolve) => {
 			new AddFiletypeModal(this.plugin.app, extension, async (newExt: string) => {
@@ -73,7 +73,7 @@ export class MenuService {
 					this.plugin.settings.monitoredExtensions.push(newExt);
 					await this.plugin.saveSettings();
 					new Notice(`Added .${newExt} to monitored file types.`);
-					info(this, 'Added new file extension', { extension: newExt });
+					loggerInfo(this, 'Added new file extension', { extension: newExt });
 				}
 				await this.createAndOpenSidecar(file);
 				resolve();
@@ -85,7 +85,7 @@ export class MenuService {
 	 * Create sidecar and open it in editor
 	 */
 	private async createAndOpenSidecar(file: TFile): Promise<void> {
-		debug(this, 'Creating and opening sidecar', { path: file.path });
+		loggerDebug(this, 'Creating and opening sidecar', { path: file.path });
 
 		const sidecarPath = this.plugin.getSidecarPath(file.path);
 		const existing = this.plugin.app.vault.getAbstractFileByPath(sidecarPath);
@@ -108,7 +108,7 @@ export class MenuService {
 	 * Open file in editor, reusing existing tab if available
 	 */
 	private async openFileInEditor(file: TFile): Promise<void> {
-		debug(this, 'Opening file in editor', { path: file.path });
+		loggerDebug(this, 'Opening file in editor', { path: file.path });
 
 		// Check if file is already open
 		let foundLeaf: WorkspaceLeaf | null = null;
@@ -119,10 +119,10 @@ export class MenuService {
 		});
 
 		if (foundLeaf) {
-			debug(this, 'File already open, activating existing tab', { path: file.path });
+			loggerDebug(this, 'File already open, activating existing tab', { path: file.path });
 			this.plugin.app.workspace.setActiveLeaf(foundLeaf, { focus: true });
 		} else {
-			debug(this, 'Opening file in new tab', { path: file.path });
+			loggerDebug(this, 'Opening file in new tab', { path: file.path });
 			const leaf = this.plugin.app.workspace.getLeaf(true);
 			await leaf.openFile(file);
 			this.plugin.app.workspace.setActiveLeaf(leaf, { focus: true });

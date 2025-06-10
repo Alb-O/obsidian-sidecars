@@ -1,6 +1,6 @@
 import { TFile, Notice, App } from 'obsidian';
 import { getBasename } from '@/utils';
-import { debug, warn, error, info } from '@/utils';
+import { loggerDebug, loggerWarn, loggerError, loggerInfo } from '@/utils';
 import type SidecarPlugin from '@/main';
 
 // Track sidecars recently restored to ignore subsequent delete events
@@ -14,37 +14,37 @@ export class SidecarManager {
 	constructor(plugin: SidecarPlugin) {
 		this.plugin = plugin;
 		this.app = plugin.app;
-		debug(this, 'SidecarManager initialized');
+		loggerDebug(this, 'SidecarManager initialized');
 	}
 	async createSidecarForFile(file: TFile, force = false): Promise<void> {
-		debug(this, 'Creating sidecar for file', { path: file.path, force });
+		loggerDebug(this, 'Creating sidecar for file', { path: file.path, force });
 
 		if (!this.plugin.hasFinishedInitialLoad && !this.plugin.settings.revalidateOnStartup) {
-			warn(this, 'Skipping sidecar creation - initial load not finished and revalidateOnStartup is false');
+			loggerWarn(this, 'Skipping sidecar creation - initial load not finished and revalidateOnStartup is false');
 			return;
 		}
 		
 		if (this.plugin.isInitialRevalidating) {
-			warn(this, 'Skipping sidecar creation - initial revalidation in progress');
+			loggerWarn(this, 'Skipping sidecar creation - initial revalidation in progress');
 			return;
 		}
 
 		const monitored = this.plugin.isMonitoredFile(file.path);
-		debug(this, 'File monitoring status', { monitored });
+		loggerDebug(this, 'File monitoring status', { monitored });
 		
 		if (monitored) {
 			const shouldCreate = force || (this.plugin.settings.autoCreateSidecars ?? true);
-			debug(this, 'Sidecar creation decision', { shouldCreate, force, autoCreateSidecars: this.plugin.settings.autoCreateSidecars });
+			loggerDebug(this, 'Sidecar creation decision', { shouldCreate, force, autoCreateSidecars: this.plugin.settings.autoCreateSidecars });
 			
 			if (shouldCreate) {
 				const sidecarPath = this.plugin.getSidecarPath(file.path);
-				debug(this, 'Sidecar path calculated', { sidecarPath });
+				loggerDebug(this, 'Sidecar path calculated', { sidecarPath });
 				
 				if (!this.app.vault.getAbstractFileByPath(sidecarPath)) {
 					try {
-						debug(this, 'Creating sidecar file', { path: sidecarPath });
+						loggerDebug(this, 'Creating sidecar file', { path: sidecarPath });
 						await this.app.vault.create(sidecarPath, '');
-						info(this, 'Sidecar created successfully', { path: sidecarPath });
+						loggerInfo(this, 'Sidecar created successfully', { path: sidecarPath });
 						new Notice(`Created sidecar: ${sidecarPath.split('/').pop()}`);
 						
 						if (typeof this.plugin.updateSidecarFileAppearance === 'function') {
@@ -52,133 +52,133 @@ export class SidecarManager {
 						}
 					} catch (err) {
 						if (String(err).includes('File already exists')) {
-							warn(this, 'Sidecar already exists, ignoring error', { path: sidecarPath });
+							loggerWarn(this, 'Sidecar already exists, ignoring error', { path: sidecarPath });
 							return;
 						}
-						error(this, 'Error creating sidecar', { path: sidecarPath, error: err });
+						loggerError(this, 'Error creating sidecar', { path: sidecarPath, error: err });
 						new Notice(`Error creating sidecar for ${file.name}`);
 					}
 				} else {
-					warn(this, 'Sidecar already exists', { path: sidecarPath });
+					loggerWarn(this, 'Sidecar already exists', { path: sidecarPath });
 				}
 			}
 		}
 	}
 	async deleteSidecarForFile(file: TFile): Promise<void> {
-		debug(this, 'Deleting sidecar for file', { path: file.path });
+		loggerDebug(this, 'Deleting sidecar for file', { path: file.path });
 
 		if (this.recentlyRestoredSidecars.has(file.path)) {
-			debug(this, 'Ignoring delete for recently restored sidecar', { path: file.path });
+			loggerDebug(this, 'Ignoring delete for recently restored sidecar', { path: file.path });
 			this.recentlyRestoredSidecars.delete(file.path);
 			return;
 		}
 
 		if (this.plugin.isSidecarFile(file.path)) {
-			debug(this, 'File is a sidecar itself, ignoring delete');
+			loggerDebug(this, 'File is a sidecar itself, ignoring delete');
 			return;
 		}
 
 		if (!this.plugin.isMonitoredFile(file.path)) {
-			debug(this, 'File is not monitored, ignoring delete');
+			loggerDebug(this, 'File is not monitored, ignoring delete');
 			return;
 		}
 
 		const sidecarPath = this.plugin.getSidecarPath(file.path);
 		const sidecarFile = this.app.vault.getAbstractFileByPath(sidecarPath);
-		debug(this, 'Sidecar lookup', { sidecarPath, found: !!sidecarFile });
+		loggerDebug(this, 'Sidecar lookup', { sidecarPath, found: !!sidecarFile });
 
 		if (sidecarFile instanceof TFile) {
 			try {
-				debug(this, 'Deleting sidecar file', { path: sidecarPath });
+				loggerDebug(this, 'Deleting sidecar file', { path: sidecarPath });
 				await this.app.fileManager.trashFile(sidecarFile);
-				info(this, 'Sidecar deleted successfully', { path: sidecarPath });
+				loggerInfo(this, 'Sidecar deleted successfully', { path: sidecarPath });
 				new Notice(`Deleted sidecar: ${sidecarPath.split('/').pop()}`);
 			} catch (err) {
-				error(this, 'Error deleting sidecar file', { path: sidecarPath, error: err });
+				loggerError(this, 'Error deleting sidecar file', { path: sidecarPath, error: err });
 				new Notice(`Error deleting sidecar for ${file.name}`);
 			}
 		} else {
-			debug(this, 'No sidecar file found to delete');
+			loggerDebug(this, 'No sidecar file found to delete');
 		}
 	}
 	async deleteAllSidecars(): Promise<void> {
-		debug(this, 'Starting deletion of all sidecars');
+		loggerDebug(this, 'Starting deletion of all sidecars');
 		
 		const allFiles = this.app.vault.getFiles();
 		const sidecarFiles = allFiles.filter(file => this.plugin.isSidecarFile(file.path));
 		
-		debug(this, 'Found sidecars to delete', { count: sidecarFiles.length });
+		loggerDebug(this, 'Found sidecars to delete', { count: sidecarFiles.length });
 		
 		let deletedCount = 0;
 		for (const sidecarFile of sidecarFiles) {
 			try {
 				await this.app.fileManager.trashFile(sidecarFile);
 				deletedCount++;
-				debug(this, 'Deleted sidecar', { path: sidecarFile.path });
+				loggerDebug(this, 'Deleted sidecar', { path: sidecarFile.path });
 			} catch (err) {
-				error(this, 'Error deleting sidecar', { path: sidecarFile.path, error: err });
+				loggerError(this, 'Error deleting sidecar', { path: sidecarFile.path, error: err });
 			}
 		}
 		
-		info(this, 'Sidecar deletion complete', { total: sidecarFiles.length, deleted: deletedCount });
+		loggerInfo(this, 'Sidecar deletion complete', { total: sidecarFiles.length, deleted: deletedCount });
 		new Notice(`Deleted ${deletedCount} of ${sidecarFiles.length} sidecar files`);
 	}
 	async handleSidecarRename(file: TFile, oldPath: string, newPath: string): Promise<void> {
-		debug(this, 'Handling sidecar rename', { oldPath, newPath });
+		loggerDebug(this, 'Handling sidecar rename', { oldPath, newPath });
 
 		const oldSidecarPath = this.plugin.getSidecarPath(oldPath);
 		const oldSidecarFile = this.app.vault.getAbstractFileByPath(oldSidecarPath);
-		debug(this, 'Old sidecar lookup', { oldSidecarPath, found: !!oldSidecarFile });
+		loggerDebug(this, 'Old sidecar lookup', { oldSidecarPath, found: !!oldSidecarFile });
 
 		if (oldSidecarFile instanceof TFile) {
-			debug(this, 'Found old sidecar file, proceeding with rename');
+			loggerDebug(this, 'Found old sidecar file, proceeding with rename');
 			const newSidecarPath = this.plugin.getSidecarPath(newPath);
-			debug(this, 'New sidecar path calculated', { newSidecarPath });
+			loggerDebug(this, 'New sidecar path calculated', { newSidecarPath });
 			
 			try {
 				const existingNewSidecar = this.app.vault.getAbstractFileByPath(newSidecarPath);
-				debug(this, 'Existing file check', { existingNewSidecar: !!existingNewSidecar });
+				loggerDebug(this, 'Existing file check', { existingNewSidecar: !!existingNewSidecar });
 				
 				if (existingNewSidecar && existingNewSidecar.path !== oldSidecarFile.path) {
-					warn(this, 'Target sidecar path already exists', { newSidecarPath });
+					loggerWarn(this, 'Target sidecar path already exists', { newSidecarPath });
 					new Notice(`Sidecar for ${getBasename(newPath)} already exists. Old sidecar not moved.`, 3000);
 				} else if (!existingNewSidecar || existingNewSidecar.path === oldSidecarFile.path) {
-					debug(this, 'Target path is available, proceeding with rename');
+					loggerDebug(this, 'Target path is available, proceeding with rename');
 					await this.app.fileManager.renameFile(oldSidecarFile, newSidecarPath);
-					info(this, 'Sidecar renamed successfully', { from: oldSidecarPath, to: newSidecarPath });
+					loggerInfo(this, 'Sidecar renamed successfully', { from: oldSidecarPath, to: newSidecarPath });
 				}
 			} catch (err) {
-				error(this, 'Error moving sidecar', { from: oldSidecarPath, to: newSidecarPath, error: err });
+				loggerError(this, 'Error moving sidecar', { from: oldSidecarPath, to: newSidecarPath, error: err });
 				new Notice(`Error moving sidecar for ${getBasename(newPath)}`, 3000);
 			}
 		} else {
-			debug(this, 'No old sidecar found, checking if new file should have a sidecar');
+			loggerDebug(this, 'No old sidecar found, checking if new file should have a sidecar');
 			if (this.plugin.isMonitoredFile(newPath) && !this.plugin.isSidecarFile(newPath)) {
-				debug(this, 'New file is monitored and not a sidecar, creating new sidecar');
+				loggerDebug(this, 'New file is monitored and not a sidecar, creating new sidecar');
 				const newSidecarPath = this.plugin.getSidecarPath(newPath);
 				const existingSidecar = this.app.vault.getAbstractFileByPath(newSidecarPath);
-				debug(this, 'Existing sidecar check', { newSidecarPath, exists: !!existingSidecar });
+				loggerDebug(this, 'Existing sidecar check', { newSidecarPath, exists: !!existingSidecar });
 				
 				if (!existingSidecar) {
 					try {
-						debug(this, 'Creating new sidecar', { path: newSidecarPath });
+						loggerDebug(this, 'Creating new sidecar', { path: newSidecarPath });
 						await this.app.vault.create(newSidecarPath, '');
-						info(this, 'New sidecar created', { path: newSidecarPath });
+						loggerInfo(this, 'New sidecar created', { path: newSidecarPath });
 						new Notice(`Created sidecar: ${newSidecarPath.split('/').pop()}`);
 					} catch (err) {
-						error(this, 'Error creating new sidecar', { path: newSidecarPath, error: err });
+						loggerError(this, 'Error creating new sidecar', { path: newSidecarPath, error: err });
 						new Notice(`Error creating sidecar for ${getBasename(newPath)}`);
 					}
 				} else {
-					debug(this, 'Sidecar already exists, not creating');
+					loggerDebug(this, 'Sidecar already exists, not creating');
 				}
 			} else {
-				debug(this, 'New file is not monitored or is already a sidecar, no action needed');
+				loggerDebug(this, 'New file is not monitored or is already a sidecar, no action needed');
 			}
 		}
 	}
 	async revalidateAllSidecars(): Promise<void> {
-		debug(this, 'Starting sidecar revalidation');
+		loggerDebug(this, 'Starting sidecar revalidation');
 		new Notice(`Starting sidecar revalidation...`, 3000);
 
 		let newlyCreatedSidecarCount = 0;
@@ -187,7 +187,7 @@ export class SidecarManager {
 
 		const allFiles = this.app.vault.getFiles();
 		const allFilePaths = new Set(allFiles.map(f => f.path));
-		debug(this, 'Revalidation scope', { totalFiles: allFiles.length });
+		loggerDebug(this, 'Revalidation scope', { totalFiles: allFiles.length });
 
 		// Phase 1: Ensure monitored files have sidecars
 		for (const file of allFiles) {
@@ -200,7 +200,7 @@ export class SidecarManager {
 
 				if (!initialSidecarExists && (this.plugin.settings.autoCreateSidecars ?? true)) {
 					try {
-						debug(this, 'Creating missing sidecar during revalidation', { filePath: file.path, sidecarPath });
+						loggerDebug(this, 'Creating missing sidecar during revalidation', { filePath: file.path, sidecarPath });
 						await this.app.vault.create(sidecarPath, '');
 						newlyCreatedSidecarCount++;
 						allFilePaths.add(sidecarPath);
@@ -210,7 +210,7 @@ export class SidecarManager {
 							sidecarEnsuredThisIteration = true;
 							if (!allFilePaths.has(sidecarPath)) allFilePaths.add(sidecarPath);
 						} else {
-							error(this, 'Error creating sidecar during revalidation', { filePath: file.path, sidecarPath, error: err });
+							loggerError(this, 'Error creating sidecar during revalidation', { filePath: file.path, sidecarPath, error: err });
 						}
 					}
 				}
@@ -220,7 +220,7 @@ export class SidecarManager {
 			}
 		}
 
-		info(this, 'Phase 1 complete - sidecars created', { newlyCreated: newlyCreatedSidecarCount, monitoredWithSidecars: countMonitoredFilesWithSidecars });
+		loggerInfo(this, 'Phase 1 complete - sidecars created', { newlyCreated: newlyCreatedSidecarCount, monitoredWithSidecars: countMonitoredFilesWithSidecars });
 
 		// Phase 2: Clean up orphan or invalid sidecars
 		const currentFilesAfterCreation = this.app.vault.getFiles();
@@ -259,27 +259,27 @@ export class SidecarManager {
 			}
 		}
 
-		debug(this, 'Phase 2 complete - orphans identified', { orphanCount: orphanSidecarsToModal.length });
+		loggerDebug(this, 'Phase 2 complete - orphans identified', { orphanCount: orphanSidecarsToModal.length });
 
 		if (orphanSidecarsToModal.length > 0 && typeof this.plugin.showOrphanModal === 'function') {
-			debug(this, 'Showing orphan modal');
+			loggerDebug(this, 'Showing orphan modal');
 			await this.plugin.showOrphanModal(orphanSidecarsToModal, orphanReasons, (deletedCount: number) => {
 				deletedOrphanCount = deletedCount;
 				new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
-				info(this, 'Revalidation complete', { created: newlyCreatedSidecarCount, monitored: countMonitoredFilesWithSidecars, deleted: deletedOrphanCount });
+				loggerInfo(this, 'Revalidation complete', { created: newlyCreatedSidecarCount, monitored: countMonitoredFilesWithSidecars, deleted: deletedOrphanCount });
 			});
 		} else {
 			new Notice(`Sidecar revalidation complete: ${newlyCreatedSidecarCount} created, ${countMonitoredFilesWithSidecars} monitored, ${deletedOrphanCount} orphans deleted.`);
-			info(this, 'Revalidation complete - no orphans', { created: newlyCreatedSidecarCount, monitored: countMonitoredFilesWithSidecars });
+			loggerInfo(this, 'Revalidation complete - no orphans', { created: newlyCreatedSidecarCount, monitored: countMonitoredFilesWithSidecars });
 		}
 	}
 	public addRecentlyRestored(path: string): void {
-		debug(this, 'Adding to recently restored set', { path });
+		loggerDebug(this, 'Adding to recently restored set', { path });
 		this.recentlyRestoredSidecars.add(path);
 	}
 
 	public clearRecentlyRestored(path: string): void {
-		debug(this, 'Removing from recently restored set', { path });
+		loggerDebug(this, 'Removing from recently restored set', { path });
 		this.recentlyRestoredSidecars.delete(path);
 	}
 }
