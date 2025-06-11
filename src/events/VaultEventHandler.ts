@@ -7,75 +7,87 @@ export class VaultEventHandler {
 	private plugin: SidecarPlugin;
 	private app: App;
 	private sidecarManager: SidecarManager;
+	private recentRenames = new Map<string, number>();
+	private readonly RENAME_DEBOUNCE_MS = 100;
+	private uiUpdateTimer: number | null = null;
+	private readonly UI_UPDATE_DEBOUNCE_MS = 50;
+	private isProcessingBulkOperation = false;
+	private bulkOperationTimer: number | null = null;
+	private readonly BULK_OPERATION_DEBOUNCE_MS = 200;
+
 	constructor(plugin: SidecarPlugin, sidecarManager: SidecarManager) {
 		this.plugin = plugin;
 		this.app = plugin.app;
 		this.sidecarManager = sidecarManager;
 	}
 
-	async renameSidecarMainFile(oldSidecarPath: string, newSidecarPath: string): Promise<void> {
-		loggerDebug(this, 'Processing sidecar rename - determining main file paths', { oldSidecarPath, newSidecarPath });
-
-		const oldMainPath = this.plugin.getSourcePathFromSidecar(oldSidecarPath);
-		if (!oldMainPath) {
-			loggerWarn(this, 'Cannot determine old main file path for sidecar', { 
-				sidecarPath: oldSidecarPath,
-				reason: 'invalid sidecar path format'
-			});
-			return;
+	/**
+	 * Mark the start of a bulk operation to reduce event processing
+	 */
+	private markBulkOperationStart(): void {
+		this.isProcessingBulkOperation = true;
+		
+		// Reset the bulk operation timer
+		if (this.bulkOperationTimer) {
+			window.clearTimeout(this.bulkOperationTimer);
 		}
-		loggerDebug(this, 'Old main file path determined', { oldMainPath });
-
-		const newMainPath = this.plugin.getSourcePathFromSidecar(newSidecarPath);
-		if (!newMainPath) {
-			loggerWarn(this, 'Cannot determine new main file path for sidecar', { 
-				sidecarPath: newSidecarPath,
-				reason: 'invalid sidecar path format'
-			});
-			return;
-		}
-		loggerDebug(this, 'New main file path determined', { newMainPath });
-
-		const mainFile = this.app.vault.getAbstractFileByPath(oldMainPath);
-		if (!mainFile || !(mainFile instanceof TFile)) {
-			loggerDebug(this, 'Main file not found - skipping rename operation', { oldMainPath });
-			return;
-		}
-		loggerDebug(this, 'Main file located successfully', { filePath: mainFile.path });
-
-		const existingTargetFile = this.app.vault.getAbstractFileByPath(newMainPath);
-		if (existingTargetFile) {
-			loggerWarn(this, 'Target main file path already exists - cannot rename', { 
-				newMainPath,
-				fileName: newMainPath.split('/').pop()
-			});
-			new Notice(`Cannot rename main file: ${newMainPath.split('/').pop()} already exists`, 3000);
-			return;
-		}
-		loggerDebug(this, 'Target path is available - proceeding with main file rename');
-
-		try {
-			loggerDebug(this, 'Renaming main file to match sidecar rename', { from: oldMainPath, to: newMainPath });
-			await this.app.fileManager.renameFile(mainFile, newMainPath);
-			
-			loggerInfo(this, 'Main file successfully renamed to match sidecar', { 
-				oldPath: oldMainPath,
-				newPath: newMainPath,
-				fileName: newMainPath.split('/').pop()
-			});
-			new Notice(`Also renamed main file to: ${newMainPath.split('/').pop()}`, 2000);
-		} catch (renameError) {
-			loggerError(this, 'Failed to rename main file', { 
-				oldPath: oldMainPath,
-				newPath: newMainPath,
-				error: renameError instanceof Error ? renameError.message : String(renameError)
-			});
-			new Notice(`Error renaming main file to ${newMainPath.split('/').pop()}`, 3000);
-		}
+		
+		this.bulkOperationTimer = window.setTimeout(() => {
+			this.isProcessingBulkOperation = false;
+			this.bulkOperationTimer = null;
+			loggerDebug(this, 'Bulk operation completed - resuming normal event processing');
+		}, this.BULK_OPERATION_DEBOUNCE_MS);
 	}
-	async handleExtensionReapplication(file: TFile, oldPath: string): Promise<boolean> {
+
+	/**
+	 * Debounced UI update to prevent excessive redraws
+	 */
+	private scheduleUIUpdate(): void {
+		if (this.uiUpdateTimer) {
+			window.clearTimeout(this.uiUpdateTimer);
+		}
+		
+		this.uiUpdateTimer = window.setTimeout(() => {
+			this.plugin.updateSidecarFileAppearance();
+			this.uiUpdateTimer = null;
+		}, this.UI_UPDATE_DEBOUNCE_MS);
+	}
+	
+	async renameSidecarMainFile(oldSidecarPath: string, newSidecarPath: string): Promise<void> {
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+		await this.plugin.fileOperationService.renameMainFileForDerivative(
+			oldSidecarPath,
+			newSidecarPath,
+			{
+				fileType: 'sidecar',
+				pathExtractor: pathExtractors.sidecar,
+				showUserNotices: true,
+				logContext: 'sidecar-main-rename'
+			}
+		);
+	}
+
+	async renameRedirectMainFile(oldRedirectPath: string, newRedirectPath: string): Promise<void> {
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+		await this.plugin.fileOperationService.renameMainFileForDerivative(
+			oldRedirectPath,
+			newRedirectPath,
+			{
+				fileType: 'redirect',
+				pathExtractor: pathExtractors.redirect,
+				showUserNotices: false,
+				logContext: 'redirect-main-rename'
+			}
+		);
+	}	async handleExtensionReapplication(file: TFile, oldPath: string): Promise<boolean> {
 		const newPath = file.path;
-		loggerDebug(this, 'Checking if file rename requires extension reapplication', { oldPath, newPath });
+		const logLevel = this.isProcessingBulkOperation ? 'debug' : 'debug'; // Keep debug level but track bulk operations
+		
+		loggerDebug(this, 'Checking if file rename requires extension reapplication', { 
+			oldPath, 
+			newPath,
+			duringBulkOp: this.isProcessingBulkOperation 
+		});
 
 		if (this.plugin.isSidecarFile(oldPath)) {
 			loggerDebug(this, 'Old path was a sidecar file - analyzing rename pattern');
@@ -148,15 +160,12 @@ export class VaultEventHandler {
 		if (file instanceof TFile) {
 			loggerDebug(this, 'Processing file creation event', { path: file.path, extension: file.extension });
 			
-			await this.sidecarManager.createSidecarForFile(file);
-
-			if (this.plugin.isRedirectFile(file.path)) {
-				loggerDebug(this, 'Redirect file created - updating sidecar appearance');
-				this.plugin.updateSidecarFileAppearance();
+			await this.sidecarManager.createSidecarForFile(file);			if (this.plugin.isRedirectFile(file.path)) {
+				loggerDebug(this, 'Redirect file created - scheduling UI update');
+				this.scheduleUIUpdate();
 			}
 		}
 	}
-
 	async handleFileDelete(file: TAbstractFile): Promise<void> {
 		if (file instanceof TFile) {
 			loggerDebug(this, 'Processing file deletion event', { path: file.path });
@@ -164,29 +173,85 @@ export class VaultEventHandler {
 			await this.sidecarManager.deleteSidecarForFile(file);
 
 			if (this.plugin.isRedirectFile(file.path)) {
-				loggerDebug(this, 'Redirect file deleted - updating sidecar appearance');
-				this.plugin.updateSidecarFileAppearance();
+				loggerDebug(this, 'Redirect file deleted - scheduling UI update');
+				this.scheduleUIUpdate();
 			}
-		}
-	}
+		}	}
 
 	async handleFileRename(file: TAbstractFile, oldPath: string): Promise<void> {
 		if (file instanceof TFile) {
 			const newPath = file.path;
+			
+			// Skip processing if we're in the middle of a bulk operation (unless it's the main file)
+			if (this.isProcessingBulkOperation && this.plugin.filePathService.isDerivativeFile(newPath)) {
+				loggerDebug(this, 'Skipping derivative file processing during bulk operation', { 
+					oldPath, 
+					newPath, 
+					isDerivative: true 
+				});
+				this.scheduleUIUpdate(); // Still schedule UI update for consistency
+				return;
+			}			// Deduplicate only very rapid rename events (system duplicates, not user actions)
+			// Use a much shorter window to only catch true system duplicates
+			const renameKey = `${oldPath}→${newPath}`;
+			const now = Date.now();
+			const lastRename = this.recentRenames.get(renameKey);
+			
+			// Only block if it's the exact same operation within a very short window (25ms)
+			// This catches system duplicates but allows legitimate user back-and-forth moves
+			if (lastRename && (now - lastRename) < 25) {
+				loggerDebug(this, 'Skipping rapid duplicate rename event', { 
+					oldPath, 
+					newPath, 
+					timeSinceLastRename: now - lastRename
+				});
+				return;
+			}
+			
+			this.recentRenames.set(renameKey, now);
+					// Clean up old entries to prevent memory leaks
+			if (this.recentRenames.size > 100) {
+				const cutoff = now - (25 * 10); // Clean up entries older than 250ms
+				for (const [key, timestamp] of this.recentRenames.entries()) {
+					if (timestamp < cutoff) {
+						this.recentRenames.delete(key);
+					}
+				}
+			}
+			
 			loggerDebug(this, 'Processing file rename event', { oldPath, newPath });
 
 			const extensionWasReapplied = await this.handleExtensionReapplication(file, oldPath);
-			loggerDebug(this, 'Extension reapplication check completed', { reapplied: extensionWasReapplied });
-
-			if (extensionWasReapplied) {
+			loggerDebug(this, 'Extension reapplication check completed', { reapplied: extensionWasReapplied });			if (extensionWasReapplied) {
 				loggerDebug(this, 'Extension was reapplied - updating UI and completing rename handling');
-				// After extension reapplication, also rename preview files
+				// After extension reapplication, also rename preview files using FileOperationService
 				loggerDebug(this, 'Processing preview file rename after extension reapplication', { oldPath, newPath });
-				await this.sidecarManager.handlePreviewRename(oldPath, newPath);
-				this.plugin.updateSidecarFileAppearance();
+				
+				const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+				const commonPreviewExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+				
+				try {
+					await this.plugin.fileOperationService.renameDerivativeForMainFile(
+						oldPath,
+						newPath,
+						{
+							fileType: 'preview',
+							pathExtractor: pathExtractors.preview,
+							showUserNotices: false,
+							logContext: 'extension-reapplication-preview-rename'
+						},
+						commonPreviewExts
+					);
+				} catch (error) {
+					loggerWarn(this, 'Error renaming preview files after extension reapplication', { 
+						oldPath, 
+						newPath, 
+						error: error instanceof Error ? error.message : String(error) 
+					});				}
+				
+				this.scheduleUIUpdate();
 				return;
 			}
-
 			if (this.plugin.isSidecarFile(newPath)) {
 				loggerDebug(this, 'Renamed file is a sidecar - processing sidecar rename logic');
 				await this.renameSidecarMainFile(oldPath, newPath);
@@ -196,23 +261,123 @@ export class VaultEventHandler {
 					loggerWarn(this, 'Sidecar is orphaned after rename - main file not found', { 
 						sidecarPath: newPath,
 						expectedMainPath: mainPath
-					});
-				}
+					});				}
 				
-				loggerDebug(this, 'Updating sidecar appearance after sidecar rename');
-				this.plugin.updateSidecarFileAppearance();
+				loggerDebug(this, 'Scheduling UI update after sidecar rename');
+				this.scheduleUIUpdate();
+				return;
+			}
+			if (this.plugin.isRedirectFile(newPath)) {
+				loggerDebug(this, 'Renamed file is a redirect file - processing redirect rename logic');
+				// Similar to sidecar handling, handle redirect file renaming
+				await this.renameRedirectMainFile(oldPath, newPath);
+				
+				loggerDebug(this, 'Scheduling UI update after redirect rename');
+				this.scheduleUIUpdate();
+				return;
+			}			if (this.plugin.isPreviewFile(newPath)) {
+				loggerDebug(this, 'Renamed file is a preview file - processing preview rename logic');
+				await this.renamePreviewMainFile(oldPath, newPath);
+				
+				loggerDebug(this, 'Scheduling UI update after preview rename');
+				this.scheduleUIUpdate();
 				return;
 			}
 
 			loggerDebug(this, 'Renamed file is a main file - processing main file rename logic');
-			// Rename associated sidecar file
-			await this.sidecarManager.handleSidecarRename(file, oldPath, newPath);
-			// Also rename associated preview files
-			loggerDebug(this, 'Processing preview file rename after main file rename', { oldPath, newPath });
-			await this.sidecarManager.handlePreviewRename(oldPath, newPath);
+			
+			// Only mark bulk operation if this could trigger derivative file renames
+			// (i.e., if the directory or base name is changing)
+			const oldDir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1);
+			const newDir = newPath.substring(0, newPath.lastIndexOf('/') + 1);
+			const shouldUseBulkMode = oldDir !== newDir || oldPath !== newPath;
+			
+			if (shouldUseBulkMode) {
+				this.markBulkOperationStart();
+			}
+			
+			// Use FileOperationService to rename associated files
+			const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+			const commonPreviewExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
 
-			loggerDebug(this, 'Updating sidecar appearance after main file rename');
-			this.plugin.updateSidecarFileAppearance();
+			// Rename associated sidecar file
+			try {
+				await this.plugin.fileOperationService.renameDerivativeForMainFile(
+					oldPath,
+					newPath,
+					{
+						fileType: 'sidecar',
+						pathExtractor: pathExtractors.sidecar,
+						showUserNotices: false,
+						logContext: 'main-sidecar-rename'
+					}
+				);
+			} catch (error) {
+				loggerWarn(this, 'Error renaming sidecar for main file', { 
+					oldPath, 
+					newPath, 
+					error: error instanceof Error ? error.message : String(error) 
+				});
+			}
+
+			// Rename associated redirect files
+			try {
+				await this.plugin.fileOperationService.renameDerivativeForMainFile(
+					oldPath,
+					newPath,
+					{
+						fileType: 'redirect',
+						pathExtractor: pathExtractors.redirect,
+						showUserNotices: false,
+						logContext: 'main-redirect-rename'
+					}
+				);
+			} catch (error) {
+				loggerWarn(this, 'Error renaming redirect for main file', { 
+					oldPath, 
+					newPath, 
+					error: error instanceof Error ? error.message : String(error) 
+				});
+			}
+
+			// Rename associated preview files
+			try {
+				await this.plugin.fileOperationService.renameDerivativeForMainFile(
+					oldPath,
+					newPath,
+					{
+						fileType: 'preview',
+						pathExtractor: pathExtractors.preview,
+						showUserNotices: false,
+						logContext: 'main-preview-rename'
+					},
+					commonPreviewExts
+				);
+			} catch (error) {
+				loggerWarn(this, 'Error renaming preview files for main file', { 
+					oldPath, 
+					newPath, 
+					error: error instanceof Error ? error.message : String(error) 
+				});
+			}			loggerDebug(this, 'Scheduling UI update after main file rename');
+			this.scheduleUIUpdate();
 		}
+	}
+
+	/**
+	 * Handle renaming the main file when a preview file is renamed
+	 */
+	private async renamePreviewMainFile(oldPreviewPath: string, newPreviewPath: string): Promise<void> {
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+		await this.plugin.fileOperationService.renameMainFileForDerivative(
+			oldPreviewPath,
+			newPreviewPath,
+			{
+				fileType: 'preview',
+				pathExtractor: pathExtractors.preview,
+				showUserNotices: false,
+				logContext: 'preview-main-rename'
+			}
+		);
 	}
 }

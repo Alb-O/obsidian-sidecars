@@ -56,25 +56,22 @@ export class FilePathService {
 		loggerDebug(this, 'File monitoring result', { filePath, extension, isMonitored });
 		return isMonitored;
 	}
-
 	/**
 	 * Generate sidecar file path for a given source file
 	 */
 	getSidecarPath(sourcePath: string): string {
 		const sidecarPath = `${sourcePath}.${this.settings.sidecarSuffix}.md`;
-		loggerDebug(this, 'Generated sidecar path', { sourcePath, sidecarPath });
+		// loggerDebug(this, 'Generated sidecar path', { sourcePath, sidecarPath }); // Reduced logging
 		return sidecarPath;
 	}
-
 	/**
 	 * Check if a file is a sidecar file
 	 */
 	isSidecarFile(filePath: string): boolean {
 		const isSidecar = filePath.endsWith(`.${this.settings.sidecarSuffix}.md`);
-		loggerDebug(this, 'Checking if file is sidecar', { filePath, isSidecar });
+		// loggerDebug(this, 'Checking if file is sidecar', { filePath, isSidecar }); // Reduced logging
 		return isSidecar;
 	}
-
 	/**
 	 * Extract source file path from sidecar path
 	 */
@@ -82,28 +79,26 @@ export class FilePathService {
 		const fullSuffix = `.${this.settings.sidecarSuffix}.md`;
 		if (sidecarPath.endsWith(fullSuffix)) {
 			const sourcePath = sidecarPath.substring(0, sidecarPath.length - fullSuffix.length);
-			loggerDebug(this, 'Extracted source path from sidecar', { sidecarPath, sourcePath });
+			// loggerDebug(this, 'Extracted source path from sidecar', { sidecarPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
-		loggerDebug(this, 'Could not extract source path from sidecar', { sidecarPath });
+		// loggerDebug(this, 'Could not extract source path from sidecar', { sidecarPath }); // Reduced logging
 		return null;
 	}
-
 	/**
 	 * Generate redirect file path for a given source file
 	 */
 	getRedirectPath(sourcePath: string): string {
 		const redirectPath = `${sourcePath}.${this.settings.redirectFileSuffix}.md`;
-		loggerDebug(this, 'Generated redirect path', { sourcePath, redirectPath });
+		// loggerDebug(this, 'Generated redirect path', { sourcePath, redirectPath }); // Reduced logging
 		return redirectPath;
 	}
-	
-	/**
+		/**
 	 * Check if a file is a redirect file
 	 */
 	isRedirectFile(filePath: string): boolean {
 		const isRedirect = filePath.endsWith(`.${this.settings.redirectFileSuffix}.md`);
-		loggerDebug(this, 'Checking if file is redirect', { filePath, isRedirect });
+		// loggerDebug(this, 'Checking if file is redirect', { filePath, isRedirect }); // Reduced logging
 		return isRedirect;
 	}
 
@@ -120,13 +115,12 @@ export class FilePathService {
 	 * Extract source file path from redirect path
 	 */
 	getSourcePathFromRedirect(redirectPath: string): string | null {
-		const fullSuffix = `.${this.settings.redirectFileSuffix}.md`;
-		if (redirectPath.endsWith(fullSuffix)) {
+		const fullSuffix = `.${this.settings.redirectFileSuffix}.md`;		if (redirectPath.endsWith(fullSuffix)) {
 			const sourcePath = redirectPath.substring(0, redirectPath.length - fullSuffix.length);
-			loggerDebug(this, 'Extracted source path from redirect', { redirectPath, sourcePath });
+			// loggerDebug(this, 'Extracted source path from redirect', { redirectPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
-		loggerDebug(this, 'Could not extract source path from redirect', { redirectPath });
+		// loggerDebug(this, 'Could not extract source path from redirect', { redirectPath }); // Reduced logging
 		return null;
 	}
 
@@ -138,10 +132,10 @@ export class FilePathService {
 		const match = previewPath.match(previewPattern);
 		if (match) {
 			const sourcePath = previewPath.substring(0, previewPath.length - match[0].length);
-			loggerDebug(this, 'Extracted source path from preview', { previewPath, sourcePath });
+			// loggerDebug(this, 'Extracted source path from preview', { previewPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
-		loggerDebug(this, 'Could not extract source path from preview', { previewPath });
+		// loggerDebug(this, 'Could not extract source path from preview', { previewPath }); // Reduced logging
 		return null;
 	}
 
@@ -166,14 +160,12 @@ export class FilePathService {
 	getMainPathFromRedirect(redirectPath: string): string | null {
 		return this.getSourcePathFromRedirect(redirectPath);
 	}
-
 	/**
 	 * Generate preview file path for a source file
 	 */
 	getPreviewPath(filePath: string, extension: string = 'png'): string {
-		// Remove the last extension from the source file
-		const basePath = filePath.replace(/\.[^.]+$/, '');
-		const previewPath = `${basePath}.${this.settings.previewFileSuffix}.${extension}`;
+		// Keep the full source filename (including extension) when generating preview path
+		const previewPath = `${filePath}.${this.settings.previewFileSuffix}.${extension}`;
 		// loggerDebug(this, 'Generated preview path', { filePath, extension, previewPath }); // Removed verbose logging
 		return previewPath;
 	}

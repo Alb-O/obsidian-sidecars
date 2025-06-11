@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS, SidecarPluginSettings, SidecarPluginInterface } from 
 import { updateSidecarFileAppearance, updateSidecarCss } from '@/explorer-style';
 import { VaultEventHandler } from '@/events';
 import { SidecarManager } from '@/SidecarManager';
-import { FilePathService, CommandService, MenuService } from '@/services';
+import { FilePathService, CommandService, MenuService, FileOperationService } from '@/services';
 
 export default class SidecarPlugin extends Plugin implements SidecarPluginInterface {
 	sidecarAppearanceObserver?: MutationObserver;
@@ -14,11 +14,11 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 	settingsManager: SettingsManager;
 	sidecarManager: SidecarManager;
 	vaultEventHandler: VaultEventHandler;
-	
 	// Services
 	filePathService: FilePathService;
 	commandService: CommandService;
 	menuService: MenuService;
+	fileOperationService: FileOperationService;
 
 	public isInitialRevalidating = false;
 	public hasFinishedInitialLoad = false;
@@ -37,7 +37,6 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		registerLoggerClass(this.settingsManager, 'SettingsManager');
 		await this.settingsManager.loadSettings();
 		this.settings = this.settingsManager.getSettings();
-		
 		// Initialize services
 		this.filePathService = new FilePathService(this.settings);
 		registerLoggerClass(this.filePathService, 'FilePathService');
@@ -47,6 +46,9 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		
 		this.menuService = new MenuService(this);
 		registerLoggerClass(this.menuService, 'MenuService');
+		
+		this.fileOperationService = new FileOperationService(this);
+		registerLoggerClass(this.fileOperationService, 'FileOperationService');
 		
 		this.isInitialRevalidating = this.settings.revalidateOnStartup;
 		this.hasFinishedInitialLoad = false;

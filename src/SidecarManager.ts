@@ -107,12 +107,11 @@ export class SidecarManager {
 			});
 		}
 	}
-
 	/**
 	 * Handle renaming of sidecar files when main file is renamed
 	 */
 	async handleSidecarRename(file: TFile, oldPath: string, newPath: string): Promise<void> {
-		loggerDebug(this, 'Processing main file rename - checking for sidecar', { oldPath, newPath });
+		loggerDebug(this, 'Processing main file rename - checking for sidecar and preview files', { oldPath, newPath });
 
 		// Skip sidecar management if file is not monitored, but still handle preview files
 		if (!this.plugin.isMonitoredFile(newPath)) {
@@ -121,90 +120,67 @@ export class SidecarManager {
 			return;
 		}
 
-		const oldSidecarPath = this.plugin.filePathService.getSidecarPath(oldPath);
-		const newSidecarPath = this.plugin.getSidecarPath(newPath);
-		const sidecarFile = this.plugin.app.vault.getAbstractFileByPath(oldSidecarPath);
-
-		// Handle sidecar rename if it exists
-		if (sidecarFile && sidecarFile instanceof TFile) {
-			// Check if target path already exists
-			const existingFile = this.plugin.app.vault.getAbstractFileByPath(newSidecarPath);
-			if (!existingFile) {
-				try {
-					loggerDebug(this, 'Renaming sidecar file', { from: oldSidecarPath, to: newSidecarPath });
-					await this.plugin.app.fileManager.renameFile(sidecarFile, newSidecarPath);
-					loggerInfo(this, 'Sidecar file renamed successfully', { oldPath: oldSidecarPath, newPath: newSidecarPath, mainFile: newPath });
-				} catch (error) {
-					loggerError(this, 'Failed to rename sidecar file', { oldPath: oldSidecarPath, newPath: newSidecarPath, error: error instanceof Error ? error.message : String(error) });
-				}
-			}
-		} else {
-			loggerDebug(this, 'No sidecar file found - nothing to rename', { oldSidecarPath });
-		}
-
-		// After sidecar rename, also handle preview files
+		// Use FileOperationService for sidecar rename
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+		
 		try {
-			loggerDebug(this, 'Processing preview file rename inside handleSidecarRename', { oldPath, newPath });
-			await this.handlePreviewRename(oldPath, newPath);
-		} catch (err) {
-			loggerWarn(this, 'Error during preview file rename in handleSidecarRename', { error: err instanceof Error ? err.message : String(err) });
+			await this.plugin.fileOperationService.renameDerivativeForMainFile(
+				oldPath,
+				newPath,
+				{
+					fileType: 'sidecar',
+					pathExtractor: pathExtractors.sidecar,
+					showUserNotices: false,
+					logContext: 'main-sidecar-rename'
+				}
+			);
+		} catch (error) {
+			loggerError(this, 'Failed to rename sidecar file using FileOperationService', { 
+				oldPath, 
+				newPath, 
+				error: error instanceof Error ? error.message : String(error) 
+			});
 		}
+		// Also handle preview files
+		await this.handlePreviewRename(oldPath, newPath);
 	}
+
 	/**
 	 * Handle renaming of preview files when main file is renamed
 	 */
 	public async handlePreviewRename(oldMainPath: string, newMainPath: string): Promise<void> {
-		loggerDebug(this, 'Checking for preview files to rename', { oldMainPath, newMainPath });
-
-		// Check for common preview extensions
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
 		const commonPreviewExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
-		let previewFilesFound = false;
+		
+		await this.plugin.fileOperationService.renameDerivativeForMainFile(
+			oldMainPath,
+			newMainPath,
+			{
+				fileType: 'preview',
+				pathExtractor: pathExtractors.preview,
+				showUserNotices: false,
+				logContext: 'main-preview-rename'
+			},
+			commonPreviewExts
+		);
+	}
 
-		for (const ext of commonPreviewExts) {
-			const oldPreviewPath = this.plugin.filePathService.getPreviewPath(oldMainPath, ext);
-			const previewFile = this.plugin.app.vault.getAbstractFileByPath(oldPreviewPath);
-
-			if (previewFile && previewFile instanceof TFile) {
-				previewFilesFound = true;
-				const newPreviewPath = this.plugin.filePathService.getPreviewPath(newMainPath, ext);
-
-				// Check if target path already exists
-				const existingFile = this.plugin.app.vault.getAbstractFileByPath(newPreviewPath);
-				if (existingFile) {
-					loggerWarn(this, 'Target preview path already exists - skipping rename', { 
-						newPreviewPath,
-						extension: ext
-					});
-					continue;
-				}
-
-				try {
-					loggerDebug(this, 'Renaming preview file', { 
-						from: oldPreviewPath, 
-						to: newPreviewPath,
-						extension: ext 
-					});
-					await this.plugin.app.fileManager.renameFile(previewFile, newPreviewPath);
-
-					loggerInfo(this, 'Preview file renamed successfully', { 
-						oldPath: oldPreviewPath,
-						newPath: newPreviewPath,
-						mainFile: newMainPath
-					});
-				} catch (error) {
-					loggerError(this, 'Failed to rename preview file', { 
-						oldPath: oldPreviewPath,
-						newPath: newPreviewPath,
-						extension: ext,
-						error: error instanceof Error ? error.message : String(error)
-					});
-				}
+	/**
+	 * Handle renaming of redirect files when main file is renamed
+	 */
+	public async handleRedirectRename(oldMainPath: string, newMainPath: string): Promise<void> {
+		const pathExtractors = this.plugin.fileOperationService.createPathExtractors();
+		
+		await this.plugin.fileOperationService.renameDerivativeForMainFile(
+			oldMainPath,
+			newMainPath,
+			{
+				fileType: 'redirect',
+				pathExtractor: pathExtractors.redirect,
+				showUserNotices: false,
+				logContext: 'main-redirect-rename'
 			}
-		}
-
-		if (!previewFilesFound) {
-			loggerDebug(this, 'No preview files found to rename', { oldMainPath });
-		}
+		);
 	}
 
 	/**
