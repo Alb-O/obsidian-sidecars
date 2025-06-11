@@ -1,4 +1,21 @@
-/* Only color the text of the destructive reset button, not the background */
+.setting-collapsible[open] > summary {
+	padding-bottom: 1em;
+}
+
+.setting-collapsible > summary .setting-item-name {
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-medium);
+}
+
+.setting-collapsible .setting-item:not(.setting-item-heading) .setting-item-name {
+	font-weight: var(--font-weight);
+}
+
+.setting-collapsible[open] > div {
+	border-left: 2px solid var(--background-modifier-border);
+	padding-left: 1em;
+}
+
 .sidecar-reset-destructive-text {
   color: var(--color-red, #f44336) !important;
 }
