@@ -1,22 +1,3 @@
-.setting-collapsible[open] > summary {
-	padding-bottom: 1em;
-}
-
-.setting-collapsible > summary .setting-item-name {
-	font-weight: var(--font-semibold);
-	font-size: var(--font-ui-medium);
-}
-
-.setting-collapsible .setting-item:not(.setting-item-heading) .setting-item-name {
-	font-weight: var(--font-weight);
-}
-
-/* Add left border to the settings container when details is open */
-.setting-collapsible[open] > div {
-	border-left: 2px solid var(--background-modifier-border);
-	padding-left: 1em;
-}
-
 /* Only color the text of the destructive reset button, not the background */
 .sidecar-reset-destructive-text {
   color: var(--color-red, #f44336) !important;
@@ -38,83 +19,60 @@
 	font-weight: bold;
 }
 
-.nav-file-tag.sidecar-tag {
-	color: var(--text-accent);
-	display: inline-block;
-}
-
-.nav-file-tag.sidecar-tag.no-color {
-	color: unset;
-}
-
-/* When a sidecar tag should be dimmed, make it more transparent */
-.nav-file-tag.sidecar-tag.dimmed {
-	opacity: var(--link-unresolved-opacity);
-	/* Use opacity for dimming */
-}
-
-/* If a dimmed tag is also set to 'no-color', do not reduce its opacity */
-.nav-file-tag.sidecar-tag.dimmed.no-color {
-	opacity: 1;
-	/* Override general dimming for no-color tags */
-}
-
-/* Restore opacity for dimmed tags when their parent item is hovered or active */
-.nav-file-title:hover .nav-file-tag.sidecar-tag.dimmed,
-.nav-file-title.is-active .nav-file-tag.sidecar-tag.dimmed {
-	opacity: 1;
-}
-
-.nav-file-tag.redirect-tag {
-	color: var(--text-error);
-	opacity: var(--link-unresolved-opacity);
-	display: inline-block;
-}
-
-.nav-file-tag.redirect-tag.no-color {
-	color: unset;
-}
-
-.nav-file-tag.redirect-tag.dimmed {
+/* General dimming for all nav-file-tag elements (including base extensions) */
+.nav-file-tag.dimmed {
 	opacity: var(--link-unresolved-opacity);
 }
 
-.nav-file-tag.redirect-tag.dimmed.no-color {
+/* Restore opacity on hover/active for all nav-file-tag elements */
+.nav-file-title:hover .nav-file-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.dimmed {
 	opacity: 1;
 }
 
-.nav-file-title:hover .nav-file-tag.redirect-tag.dimmed,
-.nav-file-title.is-active .nav-file-tag.redirect-tag.dimmed {
-	opacity: 1;
-}
-
-/* Preview tag styles */
+/* Unified styling for all sidecar tags */
+.nav-file-tag.sidecar-tag,
+.nav-file-tag.redirect-tag,
+.nav-file-tag.main-ext-tag,
 .nav-file-tag.preview-tag {
 	color: var(--text-accent);
-	opacity: var(--link-unresolved-opacity);
 	display: inline-block;
 }
 
+/* No-color variant for all tag types */
+.nav-file-tag.sidecar-tag.no-color,
+.nav-file-tag.redirect-tag.no-color,
+.nav-file-tag.main-ext-tag.no-color,
 .nav-file-tag.preview-tag.no-color {
 	color: unset;
 }
 
+/* Dimmed state for all tag types */
+.nav-file-tag.sidecar-tag.dimmed,
+.nav-file-tag.redirect-tag.dimmed,
+.nav-file-tag.main-ext-tag.dimmed,
 .nav-file-tag.preview-tag.dimmed {
 	opacity: var(--link-unresolved-opacity);
 }
 
+/* Override dimming for no-color tags */
+.nav-file-tag.sidecar-tag.dimmed.no-color,
+.nav-file-tag.redirect-tag.dimmed.no-color,
+.nav-file-tag.main-ext-tag.dimmed.no-color,
 .nav-file-tag.preview-tag.dimmed.no-color {
 	opacity: 1;
 }
 
+/* Restore opacity on hover/active for all tag types */
+.nav-file-title:hover .nav-file-tag.sidecar-tag.dimmed,
+.nav-file-title:hover .nav-file-tag.redirect-tag.dimmed,
+.nav-file-title:hover .nav-file-tag.main-ext-tag.dimmed,
 .nav-file-title:hover .nav-file-tag.preview-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.sidecar-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.redirect-tag.dimmed,
+.nav-file-title.is-active .nav-file-tag.main-ext-tag.dimmed,
 .nav-file-title.is-active .nav-file-tag.preview-tag.dimmed {
 	opacity: 1;
-}
-
-/* Main extension tag styles */
-.nav-file-tag.main-ext-tag {
-	display: inline-block;
 }
 
 .sidecar-tag-example {

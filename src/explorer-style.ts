@@ -112,7 +112,6 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					existingDecorator.remove();
 				}
 			}
-
 			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
 			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
 				const sourceFilePath = dataPath.slice(0, -fullSidecarExtension.length);
@@ -121,7 +120,12 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 				if (mainExt) {
 					const mainExtTag = document.createElement("div");
-					mainExtTag.className = "nav-file-tag main-ext-tag";
+					let classList = "nav-file-tag main-ext-tag";
+					if (plugin.settings.dimSidecarsInExplorer)
+						classList += " dimmed";
+					if (plugin.settings.colorSidecarExtension === false)
+						classList += " no-color";
+					mainExtTag.className = classList;
 					mainExtTag.textContent = mainExt.toUpperCase();
 					el.appendChild(mainExtTag);
 				}
@@ -174,7 +178,12 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 				if (mainExt) {
 					const mainExtTag = document.createElement("div");
-					mainExtTag.className = "nav-file-tag main-ext-tag";
+					let classList = "nav-file-tag main-ext-tag";
+					if (plugin.settings.dimSidecarsInExplorer)
+						classList += " dimmed";
+					if (plugin.settings.colorSidecarExtension === false)
+						classList += " no-color";
+					mainExtTag.className = classList;
 					mainExtTag.textContent = mainExt.toUpperCase();
 					el.appendChild(mainExtTag);
 				}
@@ -225,7 +234,12 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 					if (mainExt) {
 						const mainExtTag = document.createElement("div");
-						mainExtTag.className = "nav-file-tag main-ext-tag";
+						let classList = "nav-file-tag main-ext-tag";
+						if (plugin.settings.dimSidecarsInExplorer)
+							classList += " dimmed";
+						if (plugin.settings.colorSidecarExtension === false)
+							classList += " no-color";
+						mainExtTag.className = classList;
 						mainExtTag.textContent = mainExt.toUpperCase();
 						el.appendChild(mainExtTag);
 					}
