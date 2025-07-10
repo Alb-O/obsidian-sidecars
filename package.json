@@ -1,7 +1,7 @@
 {
 	"name": "sidecars",
 	"version": "0.7.2",
-	"description": "Automated, user-friendly management of 'sidecar' companion notes for non-markdown files.",
+	"description": "Automated management of 'sidecar' companion notes for attachments and other files.",
 	"main": "src/main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

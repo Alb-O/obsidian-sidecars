@@ -1,6 +1,6 @@
 # Sidecars Plugin for Obsidian
 
-Automated, user-friendly management of 'sidecar' companion notes for non-markdown files.
+Automated management of 'sidecar' companion notes for attachments and other files.
 
 ## Getting started
 
@@ -26,10 +26,10 @@ After installing, open the plugin settings and configure which file types you'd 
   - Limit sidecar management to specific folders or exclude certain folders, with support for wildcards and regular expressions.
 
 - **Advanced:**
-  - Integration with my (WIP) Blender plugin '[Blend Vault](https://github.com/AMC-Albert/blend_vault_ext)' to automatically manage linked relationships between Blend files.
+  - Integration with my (WIP) Blender plugin '[Blend Vault](https://github.com/Alb-O/blend_vault_ext)' to automatically manage linked relationships between Blend files.
 
 ## Debugging
 
 In Developer Console (`Ctrl+Shift+I`), run `window.DEBUG.enable('sidecars')`
 
-To learn more, see [obsidian-logger](https://github.com/AMC-Albert/obsidian-logger).
+To learn more, see [obsidian-logger](https://github.com/Alb-O/obsidian-logger).
