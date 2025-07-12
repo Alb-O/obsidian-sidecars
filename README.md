@@ -11,6 +11,7 @@ After installing, open the plugin settings and configure which file types you'd 
 - **Automatic and manual sidecar creation:**
   - Automatically create and manage sidecar files for any file type you choose.
   - Create sidecars on demand from the File Explorer context menu.
+  - Pick a note from your vault to use as the default template for new sidecar files.
 
 - **Context menu integration:**
   - Right-click any file to create or open its sidecar. If the file type is not monitored, you’ll be prompted to add it.
@@ -24,9 +25,6 @@ After installing, open the plugin settings and configure which file types you'd 
 
 - **Folder scoping:**
   - Limit sidecar management to specific folders or exclude certain folders, with support for wildcards and regular expressions.
-
-- **Advanced:**
-  - Integration with my (WIP) Blender plugin '[Blend Vault](https://github.com/Alb-O/blend_vault_ext)' to automatically manage linked relationships between Blend files.
 
 ## Debugging
 
