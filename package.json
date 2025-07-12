@@ -1,6 +1,6 @@
 {
 	"name": "sidecars",
-	"version": "0.7.3",
+	"version": "0.8.0",
 	"description": "Automated management of 'sidecar' companion notes for attachments and other files.",
 	"main": "src/main.js",
 	"scripts": {
