@@ -1,14 +1,31 @@
-import { initializeDebugSystem, loggerDebug, loggerWarn, initLogger, registerLoggerClass } from '@/utils';
-import { Notice, Plugin, TFile } from 'obsidian';
-import { OrphanSidecarModal } from '@/modals/OrphanSidecarModal';
-import { SettingsManager } from '@/settings/SettingsManager';
-import { DEFAULT_SETTINGS, SidecarPluginSettings, SidecarPluginInterface } from '@/types';
-import { updateSidecarFileAppearance, updateSidecarCss } from '@/explorer-style';
-import { VaultEventHandler } from '@/events';
-import { SidecarManager } from '@/SidecarManager';
-import { FilePathService, CommandService, MenuService, FileOperationService } from '@/services';
+import {
+	initializeDebugSystem,
+	loggerDebug,
+	loggerWarn,
+	initLogger,
+	registerLoggerClass,
+} from "@/utils";
+import { Plugin, TFile } from "obsidian";
+import { OrphanSidecarModal } from "@/modals/OrphanSidecarModal";
+import { SettingsManager } from "@/settings/SettingsManager";
+import type { SidecarPluginSettings, SidecarPluginInterface } from "@/types";
+import {
+	updateSidecarFileAppearance,
+	updateSidecarCss,
+} from "@/explorer-style";
+import { VaultEventHandler } from "@/events";
+import { SidecarManager } from "@/SidecarManager";
+import {
+	FilePathService,
+	CommandService,
+	MenuService,
+	FileOperationService,
+} from "@/services";
 
-export default class SidecarPlugin extends Plugin implements SidecarPluginInterface {
+export default class SidecarPlugin
+	extends Plugin
+	implements SidecarPluginInterface
+{
 	sidecarAppearanceObserver?: MutationObserver;
 	settings: SidecarPluginSettings;
 	settingsManager: SettingsManager;
@@ -31,33 +48,33 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 	}
 	async onload() {
 		initLogger(this);
-		registerLoggerClass(this, 'SidecarPlugin');
-		
+		registerLoggerClass(this, "SidecarPlugin");
+
 		this.settingsManager = new SettingsManager(this);
-		registerLoggerClass(this.settingsManager, 'SettingsManager');
+		registerLoggerClass(this.settingsManager, "SettingsManager");
 		await this.settingsManager.loadSettings();
 		this.settings = this.settingsManager.getSettings();
 		// Initialize services
 		this.filePathService = new FilePathService(this.settings);
-		registerLoggerClass(this.filePathService, 'FilePathService');
-		
+		registerLoggerClass(this.filePathService, "FilePathService");
+
 		this.commandService = new CommandService(this);
-		registerLoggerClass(this.commandService, 'CommandService');
-		
+		registerLoggerClass(this.commandService, "CommandService");
+
 		this.menuService = new MenuService(this);
-		registerLoggerClass(this.menuService, 'MenuService');
-		
+		registerLoggerClass(this.menuService, "MenuService");
+
 		this.fileOperationService = new FileOperationService(this);
-		registerLoggerClass(this.fileOperationService, 'FileOperationService');
-		
+		registerLoggerClass(this.fileOperationService, "FileOperationService");
+
 		this.isInitialRevalidating = this.settings.revalidateOnStartup;
 		this.hasFinishedInitialLoad = false;
 
 		this.sidecarManager = new SidecarManager(this);
-		registerLoggerClass(this.sidecarManager, 'SidecarManager');
+		registerLoggerClass(this.sidecarManager, "SidecarManager");
 
 		this.vaultEventHandler = new VaultEventHandler(this, this.sidecarManager);
-		registerLoggerClass(this.vaultEventHandler, 'VaultEventHandler');
+		registerLoggerClass(this.vaultEventHandler, "VaultEventHandler");
 
 		this.addSettingTab(this.settingsManager.getSettingTab());
 
@@ -70,55 +87,75 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 				this.updateSidecarCss();
 				this.updateSidecarFileAppearance();
 			}, 200);
-			this.registerEvent(this.app.vault.on('create', (file) => {
-				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad && file instanceof TFile) {
-					this.vaultEventHandler.handleFileCreate(file);
-				}
-			}));
+			this.registerEvent(
+				this.app.vault.on("create", (file) => {
+					if (
+						!this.isInitialRevalidating &&
+						this.hasFinishedInitialLoad &&
+						file instanceof TFile
+					) {
+						this.vaultEventHandler.handleFileCreate(file);
+					}
+				}),
+			);
 
-			this.registerEvent(this.app.vault.on('delete', (file) => {
-				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad && file instanceof TFile) {
-					this.vaultEventHandler.handleFileDelete(file);
-				}
-			}));
+			this.registerEvent(
+				this.app.vault.on("delete", (file) => {
+					if (
+						!this.isInitialRevalidating &&
+						this.hasFinishedInitialLoad &&
+						file instanceof TFile
+					) {
+						this.vaultEventHandler.handleFileDelete(file);
+					}
+				}),
+			);
 
-			this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-				if (!this.isInitialRevalidating && this.hasFinishedInitialLoad && file instanceof TFile) {
-					this.vaultEventHandler.handleFileRename(file, oldPath);
-				}
-			}));
+			this.registerEvent(
+				this.app.vault.on("rename", (file, oldPath) => {
+					if (
+						!this.isInitialRevalidating &&
+						this.hasFinishedInitialLoad &&
+						file instanceof TFile
+					) {
+						this.vaultEventHandler.handleFileRename(file, oldPath);
+					}
+				}),
+			);
 			if (this.settings.revalidateOnStartup) {
-				loggerDebug(this, 'Starting initial revalidation');
+				loggerDebug(this, "Starting initial revalidation");
 				this.isInitialRevalidating = true;
 				try {
 					await this.revalidateSidecars();
 				} catch (error) {
-					loggerWarn(this, 'Error during initial revalidation:', error);
+					loggerWarn(this, "Error during initial revalidation:", error);
 				} finally {
 					this.isInitialRevalidating = false;
 					this.hasFinishedInitialLoad = true;
-					loggerDebug(this, 'Initial revalidation completed');
-				}			} else {
+					loggerDebug(this, "Initial revalidation completed");
+				}
+			} else {
 				this.hasFinishedInitialLoad = true;
-				loggerDebug(this, 'Skipped initial revalidation, plugin ready');
+				loggerDebug(this, "Skipped initial revalidation, plugin ready");
 			}
 		});
 
-		loggerDebug(this, 'Plugin loading completed');
+		loggerDebug(this, "Plugin loading completed");
 	}
 	onunload() {
-		loggerDebug(this, 'Plugin unloading');
+		loggerDebug(this, "Plugin unloading");
 		if (this.sidecarAppearanceObserver) {
 			this.sidecarAppearanceObserver.disconnect();
 			this.sidecarAppearanceObserver = undefined;
 		}
-	}	async saveSettings(refreshStyles: boolean = true): Promise<void> {
-		loggerDebug(this, 'Saving settings', { refreshStyles });
+	}
+	async saveSettings(refreshStyles = true): Promise<void> {
+		loggerDebug(this, "Saving settings", { refreshStyles });
 		await this.settingsManager.saveSettings();
-		
+
 		// Update service settings
 		this.filePathService.updateSettings(this.settings);
-		
+
 		if (refreshStyles) {
 			this.updateSidecarCss();
 			this.updateSidecarFileAppearance();
@@ -129,7 +166,7 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 	async showOrphanModal(
 		orphanSidecars: string[],
 		orphanReasons: Record<string, string>,
-		postDeletionCallback: (deletedCount: number) => void
+		postDeletionCallback: (deletedCount: number) => void,
 	): Promise<void> {
 		return new Promise<void>((resolveOuterPromise) => {
 			new OrphanSidecarModal(this.app, orphanSidecars, async () => {
@@ -137,14 +174,20 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 				let actualDeletedCount = 0;
 				for (const orphanPath of orphanSidecars) {
 					try {
-						const sidecarFileToDelete = this.app.vault.getAbstractFileByPath(orphanPath);
+						const sidecarFileToDelete =
+							this.app.vault.getAbstractFileByPath(orphanPath);
 						if (sidecarFileToDelete instanceof TFile) {
 							await this.app.fileManager.trashFile(sidecarFileToDelete);
 							actualDeletedCount++;
-							loggerDebug(this, `Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`);
+							loggerDebug(
+								this,
+								`Deleted orphan sidecar ${orphanPath} because: ${orphanReasons[orphanPath]}`,
+							);
 						}
 					} catch (err) {
-						loggerWarn(this, `Error deleting orphan sidecar ${orphanPath}`, { error: err });
+						loggerWarn(this, `Error deleting orphan sidecar ${orphanPath}`, {
+							error: err,
+						});
 					}
 				}
 				postDeletionCallback(actualDeletedCount);
@@ -153,10 +196,10 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 		});
 	}
 	async revalidateSidecars(): Promise<void> {
-		loggerDebug(this, 'Starting sidecar revalidation');
+		loggerDebug(this, "Starting sidecar revalidation");
 		await this.sidecarManager.revalidateAllSidecars();
 	}
-	
+
 	// Delegate to FilePathService
 	isMonitoredFile(filePath: string): boolean {
 		return this.filePathService.isMonitoredFile(filePath, (fp: string) => {
@@ -171,7 +214,7 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 	isSidecarFile(filePath: string): boolean {
 		return this.filePathService.isSidecarFile(filePath);
 	}
-	
+
 	getSourcePathFromSidecar(sidecarPath: string): string | null {
 		return this.filePathService.getSourcePathFromSidecar(sidecarPath);
 	}
@@ -207,7 +250,7 @@ export default class SidecarPlugin extends Plugin implements SidecarPluginInterf
 
 	hasPreviewFile(filePath: string): boolean {
 		// Check for common preview extensions
-		const commonPreviewExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+		const commonPreviewExts = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
 		for (const ext of commonPreviewExts) {
 			const previewPath = this.getPreviewPath(filePath, ext);
 			if (this.app.vault.getAbstractFileByPath(previewPath) !== null) {

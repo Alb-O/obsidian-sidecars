@@ -1,12 +1,12 @@
 // Export all types from this barrel file
-import type { Plugin } from 'obsidian';
+import type { Plugin } from "obsidian";
 
 // Plugin interface for dependency injection and better type safety
 export interface SidecarPluginInterface extends Plugin {
 	settings: SidecarPluginSettings;
 	isInitialRevalidating: boolean;
 	hasFinishedInitialLoad: boolean;
-	
+
 	// Core plugin methods
 	saveSettings(refreshStyles?: boolean): Promise<void>;
 	revalidateSidecars(): Promise<void>;
@@ -16,7 +16,7 @@ export interface SidecarPluginInterface extends Plugin {
 	isSidecarFile(filePath: string): boolean;
 	isRedirectFile(filePath: string): boolean;
 	isPreviewFile(filePath: string): boolean;
-	
+
 	// Path generation methods
 	getSidecarPath(filePath: string): string;
 	getRedirectPath(filePath: string): string;
@@ -24,13 +24,13 @@ export interface SidecarPluginInterface extends Plugin {
 	getSourcePathFromSidecar(sidecarPath: string): string | null;
 	getSourcePathFromRedirect(redirectPath: string): string | null;
 	getSourcePathFromPreview(previewPath: string): string | null;
-	
+
 	// Helper methods
 	hasRedirectFile(filePath: string): boolean;
 	hasPreviewFile(filePath: string): boolean;
 	sidecarMainFileHasRedirect(sidecarPath: string): boolean;
 	sidecarMainFileHasPreview(sidecarPath: string): boolean;
-	
+
 	// UI update methods
 	updateSidecarFileAppearance(): void;
 	updateSidecarCss(): void;
@@ -50,7 +50,8 @@ export interface SidecarPluginSettings {
 	preventDraggingSidecars: boolean;
 	colorSidecarExtension: boolean;
 	hideMainExtensionInExplorer: boolean;
-	showActualExtension: boolean;	redirectFileSuffix: string;
+	showActualExtension: boolean;
+	redirectFileSuffix: string;
 	hideRedirectFilesInExplorer: boolean;
 	showRedirectDecorator: boolean;
 	showRedirectDecoratorOnSidecars: boolean;
@@ -64,7 +65,7 @@ export interface SidecarPluginSettings {
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	monitoredExtensions: [],
-	sidecarSuffix: 'side',
+	sidecarSuffix: "side",
 	blacklistFolders: [],
 	whitelistFolders: [],
 	hideSidecarsInExplorer: false,
@@ -75,11 +76,12 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	preventDraggingSidecars: true,
 	colorSidecarExtension: true,
 	hideMainExtensionInExplorer: false,
-	showActualExtension: false,	redirectFileSuffix: 'redirect',
+	showActualExtension: false,
+	redirectFileSuffix: "redirect",
 	hideRedirectFilesInExplorer: true,
 	showRedirectDecorator: true,
 	showRedirectDecoratorOnSidecars: false,
-	previewFileSuffix: 'preview',
+	previewFileSuffix: "preview",
 	hidePreviewFilesInExplorer: false,
 	showPreviewDecorator: true,
 	showPreviewDecoratorOnSidecars: false,
@@ -109,5 +111,5 @@ export type {
 	Vault,
 	Notice,
 	WorkspaceLeaf,
-	FileView
-} from 'obsidian';
+	FileView,
+} from "obsidian";

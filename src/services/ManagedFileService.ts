@@ -1,9 +1,10 @@
-import { TFile, App } from 'obsidian';
-import { loggerDebug, loggerInfo, loggerWarn, loggerError } from '@/utils';
-import type SidecarPlugin from '@/main';
-import type { FilePathService } from './FilePathService';
+import { TFile } from "obsidian";
+import type { App } from "obsidian";
+import { loggerDebug, loggerInfo, loggerWarn, loggerError } from "@/utils";
+import type SidecarPlugin from "@/main";
+import type { FilePathService } from "./FilePathService";
 
-export type ManagedFileType = 'sidecar' | 'preview' | 'redirect';
+export type ManagedFileType = "sidecar" | "preview" | "redirect";
 
 export interface ManagedFileRelationship {
 	mainFile: string;
@@ -25,30 +26,33 @@ export class ManagedFileService {
 	private mainToManaged = new Map<string, ManagedFileRelationship[]>(); // main file -> managed files
 	private managedToMain = new Map<string, ManagedFileRelationship>(); // managed file -> main file
 	private managedFilesByType = new Map<ManagedFileType, Set<string>>(); // type -> managed files
-	
+
 	// Cache for expensive operations
-	private pathCache = new Map<string, { sidecar?: string; preview?: Map<string, string>; redirect?: string }>();
+	private pathCache = new Map<
+		string,
+		{ sidecar?: string; preview?: Map<string, string>; redirect?: string }
+	>();
 
 	constructor(plugin: SidecarPlugin, filePathService: FilePathService) {
 		this.plugin = plugin;
 		this.app = plugin.app;
 		this.filePathService = filePathService;
-		
+
 		// Initialize type sets
-		this.managedFilesByType.set('sidecar', new Set());
-		this.managedFilesByType.set('preview', new Set());
-		this.managedFilesByType.set('redirect', new Set());
-		
-		loggerDebug(this, 'ManagedFileService initialized with indexed maps');
+		this.managedFilesByType.set("sidecar", new Set());
+		this.managedFilesByType.set("preview", new Set());
+		this.managedFilesByType.set("redirect", new Set());
+
+		loggerDebug(this, "ManagedFileService initialized with indexed maps");
 	}
 
 	/**
 	 * Build initial index from existing files (called once on startup)
 	 */
 	async buildInitialIndex(): Promise<void> {
-		loggerDebug(this, 'Building initial managed file index');
+		loggerDebug(this, "Building initial managed file index");
 		const startTime = Date.now();
-		
+
 		const allFiles = this.app.vault.getFiles();
 		let indexedCount = 0;
 
@@ -59,10 +63,10 @@ export class ManagedFileService {
 		}
 
 		const duration = Date.now() - startTime;
-		loggerInfo(this, 'Initial index built', { 
-			totalFiles: allFiles.length, 
+		loggerInfo(this, "Initial index built", {
+			totalFiles: allFiles.length,
 			indexedManagedFiles: indexedCount,
-			duration: `${duration}ms`
+			duration: `${duration}ms`,
 		});
 	}
 
@@ -74,7 +78,7 @@ export class ManagedFileService {
 		if (this.filePathService.isSidecarFile(filePath)) {
 			const mainPath = this.filePathService.getSourcePathFromSidecar(filePath);
 			if (mainPath) {
-				this.addRelationship(mainPath, filePath, 'sidecar');
+				this.addRelationship(mainPath, filePath, "sidecar");
 				return true;
 			}
 		}
@@ -82,14 +86,20 @@ export class ManagedFileService {
 		// Check if it's a preview file
 		const previewInfo = this.filePathService.getPreviewFileInfo(filePath);
 		if (previewInfo) {
-			this.addRelationship(previewInfo.mainPath, filePath, 'preview', previewInfo.extension);
+			this.addRelationship(
+				previewInfo.mainPath,
+				filePath,
+				"preview",
+				previewInfo.extension,
+			);
 			return true;
 		}
 
 		// Check if it's a redirect file
-		const redirectMainPath = this.filePathService.getMainPathFromRedirect(filePath);
+		const redirectMainPath =
+			this.filePathService.getMainPathFromRedirect(filePath);
 		if (redirectMainPath) {
-			this.addRelationship(redirectMainPath, filePath, 'redirect');
+			this.addRelationship(redirectMainPath, filePath, "redirect");
 			return true;
 		}
 
@@ -99,30 +109,45 @@ export class ManagedFileService {
 	/**
 	 * Add a relationship to the indexes
 	 */
-	private addRelationship(mainPath: string, managedPath: string, type: ManagedFileType, extension?: string): void {
+	private addRelationship(
+		mainPath: string,
+		managedPath: string,
+		type: ManagedFileType,
+		extension?: string,
+	): void {
 		const relationship: ManagedFileRelationship = {
 			mainFile: mainPath,
 			managedFile: managedPath,
 			type,
-			extension
+			extension,
 		};
 
 		// Add to main -> managed index
 		if (!this.mainToManaged.has(mainPath)) {
 			this.mainToManaged.set(mainPath, []);
 		}
-		this.mainToManaged.get(mainPath)!.push(relationship);
+		const managedList = this.mainToManaged.get(mainPath);
+		if (managedList) {
+			managedList.push(relationship);
+		}
 
 		// Add to managed -> main index
 		this.managedToMain.set(managedPath, relationship);
 
 		// Add to type index
-		this.managedFilesByType.get(type)!.add(managedPath);
+		const typeSet = this.managedFilesByType.get(type);
+		if (typeSet) {
+			typeSet.add(managedPath);
+		}
 
 		// Clear cache for this main file
 		this.pathCache.delete(mainPath);
 
-		loggerDebug(this, `Indexed ${type} relationship`, { mainPath, managedPath, extension });
+		loggerDebug(this, `Indexed ${type} relationship`, {
+			mainPath,
+			managedPath,
+			extension,
+		});
 	}
 
 	/**
@@ -137,7 +162,7 @@ export class ManagedFileService {
 		// Remove from main -> managed index
 		const managedList = this.mainToManaged.get(mainFile);
 		if (managedList) {
-			const index = managedList.findIndex(r => r.managedFile === managedPath);
+			const index = managedList.findIndex((r) => r.managedFile === managedPath);
 			if (index !== -1) {
 				managedList.splice(index, 1);
 				if (managedList.length === 0) {
@@ -150,12 +175,15 @@ export class ManagedFileService {
 		this.managedToMain.delete(managedPath);
 
 		// Remove from type index
-		this.managedFilesByType.get(type)!.delete(managedPath);
+		this.managedFilesByType.get(type)?.delete(managedPath);
 
 		// Clear cache for this main file
 		this.pathCache.delete(mainFile);
 
-		loggerDebug(this, `Removed ${type} relationship`, { mainFile, managedPath });
+		loggerDebug(this, `Removed ${type} relationship`, {
+			mainFile,
+			managedPath,
+		});
 	}
 
 	/**
@@ -187,21 +215,25 @@ export class ManagedFileService {
 		// Handle main file renames - update all managed files
 		const managedFiles = this.mainToManaged.get(oldPath);
 		if (managedFiles) {
-			this.handleMainFileRename(oldPath, newPath, managedFiles);
+			this.handleMainFileRename(newPath, managedFiles);
 		}
 	}
 
 	/**
 	 * Handle when a main file is renamed - rename all its managed files
 	 */
-	private async handleMainFileRename(oldMainPath: string, newMainPath: string, managedFiles: ManagedFileRelationship[]): Promise<void> {
-		loggerDebug(this, 'Handling main file rename', { 
-			oldMainPath, 
-			newMainPath, 
-			managedFileCount: managedFiles.length 
+	private async handleMainFileRename(
+		newMainPath: string,
+		managedFiles: ManagedFileRelationship[],
+	): Promise<void> {
+		loggerDebug(this, "Handling main file rename", {
+			newMainPath,
+			managedFileCount: managedFiles.length,
 		});
 
 		// Update the index first
+		// Find the old main path by looking at the first relationship
+		const oldMainPath = managedFiles.length > 0 ? managedFiles[0].mainFile : "";
 		this.mainToManaged.delete(oldMainPath);
 		this.mainToManaged.set(newMainPath, managedFiles);
 
@@ -216,32 +248,48 @@ export class ManagedFileService {
 
 		// Rename each managed file
 		for (const relationship of managedFiles) {
-			await this.renameManagedFile(relationship, oldMainPath, newMainPath);
+			await this.renameManagedFile(relationship, newMainPath);
 		}
 	}
 
 	/**
 	 * Rename a managed file to match its main file's new path
 	 */
-	private async renameManagedFile(relationship: ManagedFileRelationship, oldMainPath: string, newMainPath: string): Promise<void> {
+	private async renameManagedFile(
+		relationship: ManagedFileRelationship,
+		newMainPath: string,
+	): Promise<void> {
 		const { managedFile, type, extension } = relationship;
 		const file = this.app.vault.getAbstractFileByPath(managedFile);
-		
+
 		if (!(file instanceof TFile)) {
-			loggerWarn(this, `Managed file not found for rename`, { managedFile, type });
+			loggerWarn(this, `Managed file not found for rename`, {
+				managedFile,
+				type,
+			});
 			return;
 		}
 
 		let newManagedPath: string;
-		
+
 		switch (type) {
-			case 'sidecar':
+			case "sidecar":
 				newManagedPath = this.filePathService.getSidecarPath(newMainPath);
 				break;
-			case 'preview':
-				newManagedPath = this.filePathService.getPreviewPath(newMainPath, extension!);
+			case "preview":
+				if (!extension) {
+					loggerError(this, "Extension is required for preview file rename", {
+						relationship,
+						newMainPath,
+					});
+					return;
+				}
+				newManagedPath = this.filePathService.getPreviewPath(
+					newMainPath,
+					extension,
+				);
 				break;
-			case 'redirect':
+			case "redirect":
 				newManagedPath = this.filePathService.getRedirectPath(newMainPath);
 				break;
 			default:
@@ -252,34 +300,40 @@ export class ManagedFileService {
 		// Check if target path already exists
 		const existingFile = this.app.vault.getAbstractFileByPath(newManagedPath);
 		if (existingFile && existingFile.path !== managedFile) {
-			loggerWarn(this, `Target path already exists for ${type} file`, { 
-				oldPath: managedFile, 
-				newPath: newManagedPath 
+			loggerWarn(this, `Target path already exists for ${type} file`, {
+				oldPath: managedFile,
+				newPath: newManagedPath,
 			});
 			return;
 		}
 
 		try {
 			await this.app.fileManager.renameFile(file, newManagedPath);
-			
+
 			// Update the relationship
 			relationship.managedFile = newManagedPath;
 			this.managedToMain.set(newManagedPath, relationship);
 			this.managedToMain.delete(managedFile);
-			
-			// Update type index
-			this.managedFilesByType.get(type)!.delete(managedFile);
-			this.managedFilesByType.get(type)!.add(newManagedPath);
 
-			loggerInfo(this, `Renamed ${type} file`, { 
-				from: managedFile, 
-				to: newManagedPath 
+			// Update type index
+			const typeSet = this.managedFilesByType.get(type);
+			if (typeSet) {
+				typeSet.delete(managedFile);
+			}
+			const typeSetNew = this.managedFilesByType.get(type);
+			if (typeSetNew) {
+				typeSetNew.add(newManagedPath);
+			}
+
+			loggerInfo(this, `Renamed ${type} file`, {
+				from: managedFile,
+				to: newManagedPath,
 			});
 		} catch (error) {
-			loggerError(this, `Failed to rename ${type} file`, { 
-				from: managedFile, 
-				to: newManagedPath, 
-				error 
+			loggerError(this, `Failed to rename ${type} file`, {
+				from: managedFile,
+				to: newManagedPath,
+				error,
 			});
 		}
 	}
@@ -294,9 +348,12 @@ export class ManagedFileService {
 	/**
 	 * Get managed files of a specific type for a main file
 	 */
-	getManagedFilesByType(mainPath: string, type: ManagedFileType): ManagedFileRelationship[] {
+	getManagedFilesByType(
+		mainPath: string,
+		type: ManagedFileType,
+	): ManagedFileRelationship[] {
 		const managedFiles = this.mainToManaged.get(mainPath) || [];
-		return managedFiles.filter(f => f.type === type);
+		return managedFiles.filter((f) => f.type === type);
 	}
 
 	/**
@@ -323,21 +380,25 @@ export class ManagedFileService {
 	/**
 	 * Create a managed file for a main file
 	 */
-	async createManagedFile(mainPath: string, type: ManagedFileType, extension?: string): Promise<boolean> {
+	async createManagedFile(
+		mainPath: string,
+		type: ManagedFileType,
+		extension?: string,
+	): Promise<boolean> {
 		let managedPath: string;
-		
+
 		switch (type) {
-			case 'sidecar':
+			case "sidecar":
 				managedPath = this.filePathService.getSidecarPath(mainPath);
 				break;
-			case 'preview':
+			case "preview":
 				if (!extension) {
-					loggerError(this, 'Extension required for preview file creation');
+					loggerError(this, "Extension required for preview file creation");
 					return false;
 				}
 				managedPath = this.filePathService.getPreviewPath(mainPath, extension);
 				break;
-			case 'redirect':
+			case "redirect":
 				managedPath = this.filePathService.getRedirectPath(mainPath);
 				break;
 			default:
@@ -352,11 +413,15 @@ export class ManagedFileService {
 		}
 
 		try {
-			await this.app.vault.create(managedPath, '');
+			await this.app.vault.create(managedPath, "");
 			loggerInfo(this, `Created ${type} file`, { mainPath, managedPath });
 			return true;
 		} catch (error) {
-			loggerError(this, `Failed to create ${type} file`, { mainPath, managedPath, error });
+			loggerError(this, `Failed to create ${type} file`, {
+				mainPath,
+				managedPath,
+				error,
+			});
 			return false;
 		}
 	}
@@ -366,20 +431,22 @@ export class ManagedFileService {
 	 */
 	async deleteManagedFiles(mainPath: string): Promise<void> {
 		const managedFiles = this.getManagedFiles(mainPath);
-		
+
 		for (const relationship of managedFiles) {
-			const file = this.app.vault.getAbstractFileByPath(relationship.managedFile);
+			const file = this.app.vault.getAbstractFileByPath(
+				relationship.managedFile,
+			);
 			if (file instanceof TFile) {
 				try {
 					await this.app.fileManager.trashFile(file);
-					loggerInfo(this, `Deleted ${relationship.type} file`, { 
-						mainPath, 
-						managedPath: relationship.managedFile 
+					loggerInfo(this, `Deleted ${relationship.type} file`, {
+						mainPath,
+						managedPath: relationship.managedFile,
 					});
 				} catch (error) {
-					loggerError(this, `Failed to delete ${relationship.type} file`, { 
-						managedPath: relationship.managedFile, 
-						error 
+					loggerError(this, `Failed to delete ${relationship.type} file`, {
+						managedPath: relationship.managedFile,
+						error,
 					});
 				}
 			}
@@ -391,10 +458,10 @@ export class ManagedFileService {
 	 */
 	getStatistics(): { [key in ManagedFileType]: number } & { total: number } {
 		const stats = {
-			sidecar: this.managedFilesByType.get('sidecar')!.size,
-			preview: this.managedFilesByType.get('preview')!.size,
-			redirect: this.managedFilesByType.get('redirect')!.size,
-			total: 0
+			sidecar: this.managedFilesByType.get("sidecar")?.size ?? 0,
+			preview: this.managedFilesByType.get("preview")?.size ?? 0,
+			redirect: this.managedFilesByType.get("redirect")?.size ?? 0,
+			total: 0,
 		};
 		stats.total = stats.sidecar + stats.preview + stats.redirect;
 		return stats;
@@ -407,11 +474,13 @@ export class ManagedFileService {
 		const orphans: { [key in ManagedFileType]: string[] } = {
 			sidecar: [],
 			preview: [],
-			redirect: []
+			redirect: [],
 		};
 
 		for (const [managedPath, relationship] of this.managedToMain) {
-			const mainFile = this.app.vault.getAbstractFileByPath(relationship.mainFile);
+			const mainFile = this.app.vault.getAbstractFileByPath(
+				relationship.mainFile,
+			);
 			if (!mainFile || !(mainFile instanceof TFile)) {
 				orphans[relationship.type].push(managedPath);
 			}

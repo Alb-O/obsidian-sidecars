@@ -13,12 +13,15 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		const dataPath = el.getAttribute("data-path");
 		if (!dataPath) return;
 
-		const fullSidecarExtension =
-			"." + plugin.settings.sidecarSuffix + ".md";
+		const fullSidecarExtension = `.${plugin.settings.sidecarSuffix}.md`;
 		const isSidecar = dataPath.endsWith(fullSidecarExtension);
 		const innerContentEl = el.querySelector(".tree-item-inner");
 		// Remove any existing extension tags inside nav-file-title
-		Array.from(el.querySelectorAll('.main-ext-tag, .sidecar-tag, .redirect-tag, .preview-tag')).forEach((tag) => tag.remove());
+		Array.from(
+			el.querySelectorAll(
+				".main-ext-tag, .sidecar-tag, .redirect-tag, .preview-tag",
+			),
+		).forEach((tag) => tag.remove());
 
 		if (isSidecar) {
 			// 1. Set draggable attribute based on settings
@@ -35,10 +38,10 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					// Build display: add baseName only (no tags inside)
 					const sourceFilePath = dataPath.slice(
 						0,
-						-fullSidecarExtension.length
+						-fullSidecarExtension.length,
 					);
 					const sourceFileName = sourceFilePath.substring(
-						sourceFilePath.lastIndexOf("/") + 1
+						sourceFilePath.lastIndexOf("/") + 1,
 					);
 					const dotIndex = sourceFileName.lastIndexOf(".");
 					const baseName =
@@ -51,63 +54,70 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			}
 
 			// Add redirect decorator to sidecar if enabled and main file has redirect
-			if (plugin.settings.showRedirectDecoratorOnSidecars && plugin.sidecarMainFileHasRedirect(dataPath)) {
-				const titleEl = el.querySelector('.tree-item-inner');
+			if (
+				plugin.settings.showRedirectDecoratorOnSidecars &&
+				plugin.sidecarMainFileHasRedirect(dataPath)
+			) {
+				const titleEl = el.querySelector(".tree-item-inner");
 				if (titleEl) {
 					// Remove any existing redirect decorator
-					const existingDecorator = el.querySelector('.redirect-decorator');
+					const existingDecorator = el.querySelector(".redirect-decorator");
 					if (existingDecorator) {
 						existingDecorator.remove();
-					}					// Add the redirect decorator icon at the beginning
-					const decoratorEl = document.createElement('span');
-					decoratorEl.className = 'redirect-decorator';
+					} // Add the redirect decorator icon at the beginning
+					const decoratorEl = document.createElement("span");
+					decoratorEl.className = "redirect-decorator";
 					// Apply dimming if sidecar dimming is enabled
 					if (plugin.settings.dimSidecarsInExplorer) {
-						decoratorEl.classList.add('dimmed');
+						decoratorEl.classList.add("dimmed");
 					}
 					// Apply accent color if sidecar coloring is enabled
 					if (plugin.settings.colorSidecarExtension) {
-						decoratorEl.classList.add('accent-colored');
+						decoratorEl.classList.add("accent-colored");
 					}
-					decoratorEl.title = 'Main file has a redirect file';
-					
+					decoratorEl.title = "Main file has a redirect file";
+
 					// Insert the decorator before the existing content
 					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
-				}			} else {
+				}
+			} else {
 				// Remove redirect decorator if setting is disabled or redirect file is gone
-				const existingDecorator = el.querySelector('.redirect-decorator');
+				const existingDecorator = el.querySelector(".redirect-decorator");
 				if (existingDecorator) {
 					existingDecorator.remove();
 				}
 			}
 
 			// Add preview decorator to sidecar if enabled and main file has preview
-			if (plugin.settings.showPreviewDecoratorOnSidecars && plugin.sidecarMainFileHasPreview(dataPath)) {
-				const titleEl = el.querySelector('.tree-item-inner');
+			if (
+				plugin.settings.showPreviewDecoratorOnSidecars &&
+				plugin.sidecarMainFileHasPreview(dataPath)
+			) {
+				const titleEl = el.querySelector(".tree-item-inner");
 				if (titleEl) {
 					// Remove any existing preview decorator
-					const existingDecorator = el.querySelector('.preview-decorator');
+					const existingDecorator = el.querySelector(".preview-decorator");
 					if (existingDecorator) {
 						existingDecorator.remove();
-					}					// Add the preview decorator icon at the beginning
-					const decoratorEl = document.createElement('span');
-					decoratorEl.className = 'preview-decorator';
+					} // Add the preview decorator icon at the beginning
+					const decoratorEl = document.createElement("span");
+					decoratorEl.className = "preview-decorator";
 					// Apply dimming if sidecar dimming is enabled
 					if (plugin.settings.dimSidecarsInExplorer) {
-						decoratorEl.classList.add('dimmed');
+						decoratorEl.classList.add("dimmed");
 					}
 					// Apply accent color if sidecar coloring is enabled
 					if (plugin.settings.colorSidecarExtension) {
-						decoratorEl.classList.add('accent-colored');
+						decoratorEl.classList.add("accent-colored");
 					}
-					decoratorEl.title = 'Main file has a preview file';
-					
+					decoratorEl.title = "Main file has a preview file";
+
 					// Insert the decorator before the existing content
 					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
 				}
 			} else {
 				// Remove preview decorator if setting is disabled or preview file is gone
-				const existingDecorator = el.querySelector('.preview-decorator');
+				const existingDecorator = el.querySelector(".preview-decorator");
 				if (existingDecorator) {
 					existingDecorator.remove();
 				}
@@ -115,14 +125,16 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
 			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
 				const sourceFilePath = dataPath.slice(0, -fullSidecarExtension.length);
-				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+				const sourceFileName = sourceFilePath.substring(
+					sourceFilePath.lastIndexOf("/") + 1,
+				);
 				const dotIndex = sourceFileName.lastIndexOf(".");
-				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
+				const mainExt =
+					dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 				if (mainExt) {
 					const mainExtTag = document.createElement("div");
 					let classList = "nav-file-tag main-ext-tag";
-					if (plugin.settings.dimSidecarsInExplorer)
-						classList += " dimmed";
+					if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 					if (plugin.settings.colorSidecarExtension === false)
 						classList += " no-color";
 					mainExtTag.className = classList;
@@ -134,23 +146,25 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			// Append sidecar suffix tag as child
 			const sidecarTagEl = document.createElement("div");
 			let classList = "nav-file-tag sidecar-tag";
-			if (plugin.settings.dimSidecarsInExplorer)
-				classList += " dimmed";
+			if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 			if (plugin.settings.colorSidecarExtension === false)
 				classList += " no-color";
 			sidecarTagEl.className = classList;
-			sidecarTagEl.textContent = plugin.settings.sidecarSuffix + (plugin.settings.showActualExtension ? ".md" : "");
+			sidecarTagEl.textContent =
+				plugin.settings.sidecarSuffix +
+				(plugin.settings.showActualExtension ? ".md" : "");
 			el.appendChild(sidecarTagEl);
 
 			// Reset draggable status if we set it
 			if (el.getAttribute("draggable") === "false") {
 				el.removeAttribute("draggable");
 			}
-		}		// --- Handle redirect files ---
+		} // --- Handle redirect files ---
 		// Note: We style redirect files based on their filename pattern regardless of whether
 		// redirect file management is enabled. The management setting only controls creation.
-		const fullRedirectExtension = plugin.settings.redirectFileSuffix ? 
-			'.' + plugin.settings.redirectFileSuffix + '.md' : '.redirect.md';
+		const fullRedirectExtension = plugin.settings.redirectFileSuffix
+			? `.${plugin.settings.redirectFileSuffix}.md`
+			: ".redirect.md";
 		const isRedirect = dataPath.endsWith(fullRedirectExtension);
 		if (isRedirect) {
 			if (plugin.settings.preventDraggingSidecars) {
@@ -163,24 +177,34 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				// Only append base name if not hiding it
 				if (!plugin.settings.hideSidecarBaseNameInExplorer) {
 					// Show the base name (without .redirect.md)
-					const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
-					const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+					const sourceFilePath = dataPath.slice(
+						0,
+						-fullRedirectExtension.length,
+					);
+					const sourceFileName = sourceFilePath.substring(
+						sourceFilePath.lastIndexOf("/") + 1,
+					);
 					const dotIndex = sourceFileName.lastIndexOf(".");
-					const baseName = dotIndex !== -1 ? sourceFileName.slice(0, dotIndex) : sourceFileName;
+					const baseName =
+						dotIndex !== -1
+							? sourceFileName.slice(0, dotIndex)
+							: sourceFileName;
 					innerContentEl.appendChild(document.createTextNode(baseName));
 				}
 			}
 			// If hideMainExtensionInExplorer is false and we have a main extension, show it as a tag (as child)
 			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
 				const sourceFilePath = dataPath.slice(0, -fullRedirectExtension.length);
-				const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+				const sourceFileName = sourceFilePath.substring(
+					sourceFilePath.lastIndexOf("/") + 1,
+				);
 				const dotIndex = sourceFileName.lastIndexOf(".");
-				const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
+				const mainExt =
+					dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 				if (mainExt) {
 					const mainExtTag = document.createElement("div");
 					let classList = "nav-file-tag main-ext-tag";
-					if (plugin.settings.dimSidecarsInExplorer)
-						classList += " dimmed";
+					if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 					if (plugin.settings.colorSidecarExtension === false)
 						classList += " no-color";
 					mainExtTag.className = classList;
@@ -191,16 +215,18 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			// Append redirect suffix tag as child
 			const redirectTagEl = document.createElement("div");
 			let classList = "nav-file-tag redirect-tag";
-			if (plugin.settings.dimSidecarsInExplorer)
-				classList += " dimmed";
+			if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 			if (plugin.settings.colorSidecarExtension === false)
 				classList += " no-color";
 			redirectTagEl.className = classList;
-			redirectTagEl.textContent = plugin.settings.redirectFileSuffix + (plugin.settings.showActualExtension ? ".md" : "");
+			redirectTagEl.textContent =
+				plugin.settings.redirectFileSuffix +
+				(plugin.settings.showActualExtension ? ".md" : "");
 			el.appendChild(redirectTagEl);
 			if (el.getAttribute("draggable") === "false") {
 				el.removeAttribute("draggable");
-			}		}
+			}
+		}
 
 		// --- Handle preview files ---
 		// Preview files follow pattern: originalname.preview.extension
@@ -218,9 +244,14 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					// Show the base name (without .preview.ext)
 					const sourceFilePath = plugin.getSourcePathFromPreview(dataPath);
 					if (sourceFilePath) {
-						const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+						const sourceFileName = sourceFilePath.substring(
+							sourceFilePath.lastIndexOf("/") + 1,
+						);
 						const dotIndex = sourceFileName.lastIndexOf(".");
-						const baseName = dotIndex !== -1 ? sourceFileName.slice(0, dotIndex) : sourceFileName;
+						const baseName =
+							dotIndex !== -1
+								? sourceFileName.slice(0, dotIndex)
+								: sourceFileName;
 						innerContentEl.appendChild(document.createTextNode(baseName));
 					}
 				}
@@ -229,14 +260,16 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			if (!plugin.settings.hideMainExtensionInExplorer && innerContentEl) {
 				const sourceFilePath = plugin.getSourcePathFromPreview(dataPath);
 				if (sourceFilePath) {
-					const sourceFileName = sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+					const sourceFileName = sourceFilePath.substring(
+						sourceFilePath.lastIndexOf("/") + 1,
+					);
 					const dotIndex = sourceFileName.lastIndexOf(".");
-					const mainExt = dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
+					const mainExt =
+						dotIndex !== -1 ? sourceFileName.slice(dotIndex + 1) : "";
 					if (mainExt) {
 						const mainExtTag = document.createElement("div");
 						let classList = "nav-file-tag main-ext-tag";
-						if (plugin.settings.dimSidecarsInExplorer)
-							classList += " dimmed";
+						if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 						if (plugin.settings.colorSidecarExtension === false)
 							classList += " no-color";
 						mainExtTag.className = classList;
@@ -248,15 +281,18 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 			// Append preview suffix tag as child
 			const previewTagEl = document.createElement("div");
 			let classList = "nav-file-tag preview-tag";
-			if (plugin.settings.dimSidecarsInExplorer)
-				classList += " dimmed";
+			if (plugin.settings.dimSidecarsInExplorer) classList += " dimmed";
 			if (plugin.settings.colorSidecarExtension === false)
 				classList += " no-color";
 			previewTagEl.className = classList;
-			
+
 			// Get the actual extension from the preview file
-			const actualExt = dataPath.substring(dataPath.lastIndexOf('.') + 1);
-			previewTagEl.textContent = plugin.settings.previewFileSuffix + (plugin.settings.showActualExtension ? '.' + actualExt.toUpperCase() : "");
+			const actualExt = dataPath.substring(dataPath.lastIndexOf(".") + 1);
+			previewTagEl.textContent =
+				plugin.settings.previewFileSuffix +
+				(plugin.settings.showActualExtension
+					? `.${actualExt.toUpperCase()}`
+					: "");
 			el.appendChild(previewTagEl);
 			if (el.getAttribute("draggable") === "false") {
 				el.removeAttribute("draggable");
@@ -265,26 +301,32 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 
 		// --- Handle regular files with redirect decorators ---
 		// Only process files that are not sidecar, redirect, or preview files
-		if (!isSidecar && !isRedirect && !isPreview && plugin.settings.showRedirectDecorator) {
+		if (
+			!isSidecar &&
+			!isRedirect &&
+			!isPreview &&
+			plugin.settings.showRedirectDecorator
+		) {
 			// Check if this file has a redirect file
 			if (plugin.hasRedirectFile(dataPath)) {
 				// Add redirect decorator icon
-				const titleEl = el.querySelector('.tree-item-inner');
+				const titleEl = el.querySelector(".tree-item-inner");
 				if (titleEl) {
 					// Remove any existing redirect decorator
-					const existingDecorator = el.querySelector('.redirect-decorator');
+					const existingDecorator = el.querySelector(".redirect-decorator");
 					if (existingDecorator) {
 						existingDecorator.remove();
-					}					// Add the redirect decorator icon at the beginning
-					const decoratorEl = document.createElement('span');
-					decoratorEl.className = 'redirect-decorator';
-					decoratorEl.title = 'This file has a redirect file';
-					
+					} // Add the redirect decorator icon at the beginning
+					const decoratorEl = document.createElement("span");
+					decoratorEl.className = "redirect-decorator";
+					decoratorEl.title = "This file has a redirect file";
+
 					// Insert the decorator before the existing content
 					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
-				}			} else {
+				}
+			} else {
 				// Remove redirect decorator if it exists but redirect file is gone
-				const existingDecorator = el.querySelector('.redirect-decorator');
+				const existingDecorator = el.querySelector(".redirect-decorator");
 				if (existingDecorator) {
 					existingDecorator.remove();
 				}
@@ -293,27 +335,32 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 
 		// --- Handle regular files with preview decorators ---
 		// Only process files that are not sidecar, redirect, or preview files
-		if (!isSidecar && !isRedirect && !isPreview && plugin.settings.showPreviewDecorator) {
+		if (
+			!isSidecar &&
+			!isRedirect &&
+			!isPreview &&
+			plugin.settings.showPreviewDecorator
+		) {
 			// Check if this file has a preview file
 			if (plugin.hasPreviewFile(dataPath)) {
 				// Add preview decorator icon
-				const titleEl = el.querySelector('.tree-item-inner');
+				const titleEl = el.querySelector(".tree-item-inner");
 				if (titleEl) {
 					// Remove any existing preview decorator
-					const existingDecorator = el.querySelector('.preview-decorator');
+					const existingDecorator = el.querySelector(".preview-decorator");
 					if (existingDecorator) {
 						existingDecorator.remove();
-					}					// Add the preview decorator icon at the beginning
-					const decoratorEl = document.createElement('span');
-					decoratorEl.className = 'preview-decorator';
-					decoratorEl.title = 'This file has a preview file';
-					
+					} // Add the preview decorator icon at the beginning
+					const decoratorEl = document.createElement("span");
+					decoratorEl.className = "preview-decorator";
+					decoratorEl.title = "This file has a preview file";
+
 					// Insert the decorator before the existing content
 					titleEl.insertBefore(decoratorEl, titleEl.firstChild);
 				}
 			} else {
 				// Remove preview decorator if it exists but preview file is gone
-				const existingDecorator = el.querySelector('.preview-decorator');
+				const existingDecorator = el.querySelector(".preview-decorator");
 				if (existingDecorator) {
 					existingDecorator.remove();
 				}
@@ -348,11 +395,8 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				if (mutation.target instanceof HTMLElement) {
 					// Check for drag operation related classes
 					if (
-						mutation.target.classList.contains(
-							"is-being-dragged-over"
-						) ||
-						(mutation.oldValue &&
-							mutation.oldValue.includes("is-being-dragged-over"))
+						mutation.target.classList.contains("is-being-dragged-over") ||
+						mutation.oldValue?.includes("is-being-dragged-over")
 					) {
 						return; // Skip this specific mutation
 					}
@@ -361,9 +405,7 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					if (mutation.attributeName === "data-path") {
 						dataPathChanged = true;
 						shouldProcessAttributes = true;
-						if (
-							mutation.target.classList.contains("nav-file-title")
-						) {
+						if (mutation.target.classList.contains("nav-file-title")) {
 							affectedNodes.add(mutation.target);
 						}
 					}
@@ -372,8 +414,7 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 					if (
 						mutation.attributeName === "class" &&
 						(mutation.target.classList.contains("is-collapsed") ||
-							(mutation.oldValue &&
-								mutation.oldValue.includes("is-collapsed")))
+							mutation.oldValue?.includes("is-collapsed"))
 					) {
 						shouldProcessAttributes = true;
 					}
@@ -392,32 +433,44 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 				// First, process any directly affected nodes
 				if (affectedNodes.size > 0) {
 					affectedNodes.forEach((node) => processNavItem(node));
-				}				// If we had data-path changes, refresh relevant files
+				} // If we had data-path changes, refresh relevant files
 				// This ensures that moved files are properly styled
 				if (dataPathChanged) {
-					const query = '.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"], ' +
-						'.nav-file-title[data-path$=".' + plugin.settings.redirectFileSuffix + '.md"]';
-					document.querySelectorAll(query)
-						.forEach((el) => {
-							if (el instanceof HTMLElement) processNavItem(el);
-						});
-					
+					const query =
+						'.nav-file-title[data-path$=".' +
+						plugin.settings.sidecarSuffix +
+						'.md"], ' +
+						'.nav-file-title[data-path$=".' +
+						plugin.settings.redirectFileSuffix +
+						'.md"]';
+					document.querySelectorAll(query).forEach((el) => {
+						if (el instanceof HTMLElement) processNavItem(el);
+					});
+
 					// Also refresh all regular files to update redirect decorators
 					if (plugin.settings.showRedirectDecorator) {
-						document.querySelectorAll('.nav-file-title')
-							.forEach((el) => {
-								if (el instanceof HTMLElement) {
-									const dataPath = el.getAttribute("data-path");
-									if (dataPath && !plugin.isSidecarFile(dataPath) && !plugin.isRedirectFile(dataPath)) {
-										processNavItem(el);
-									}
+						document.querySelectorAll(".nav-file-title").forEach((el) => {
+							if (el instanceof HTMLElement) {
+								const dataPath = el.getAttribute("data-path");
+								if (
+									dataPath &&
+									!plugin.isSidecarFile(dataPath) &&
+									!plugin.isRedirectFile(dataPath)
+								) {
+									processNavItem(el);
 								}
-							});
+							}
+						});
 					}
 
 					// Also refresh sidecar files if decorator on sidecars is enabled
 					if (plugin.settings.showRedirectDecoratorOnSidecars) {
-						document.querySelectorAll('.nav-file-title[data-path$=".' + plugin.settings.sidecarSuffix + '.md"]')
+						document
+							.querySelectorAll(
+								'.nav-file-title[data-path$=".' +
+									plugin.settings.sidecarSuffix +
+									'.md"]',
+							)
 							.forEach((el) => {
 								if (el instanceof HTMLElement) processNavItem(el);
 							});
@@ -428,13 +481,14 @@ export function updateSidecarFileAppearance(plugin: SidecarPlugin) {
 		}
 	});
 	const navContainer = document.querySelector(
-		".nav-files-container, .workspace-leaf-content .nav-files-container"
+		".nav-files-container, .workspace-leaf-content .nav-files-container",
 	);
 	if (navContainer) {
 		plugin.sidecarAppearanceObserver.observe(navContainer, {
 			childList: true,
 			subtree: true,
-			attributes: true, attributeOldValue: true,
+			attributes: true,
+			attributeOldValue: true,
 			attributeFilter: ["class", "data-path"], // Track both class and data-path changes
 		});
 	}
@@ -449,10 +503,10 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 	let styleElement = document.getElementById(id) as HTMLStyleElement | null;
 	let styleTextContent = "";
 
-	const fullSidecarExtension = "." + plugin.settings.sidecarSuffix + ".md";
-	const fullRedirectExtension = "." + plugin.settings.redirectFileSuffix + ".md";
-	const previewPattern = "." + plugin.settings.previewFileSuffix + ".";
-	
+	const fullSidecarExtension = `.${plugin.settings.sidecarSuffix}.md`;
+	const fullRedirectExtension = `.${plugin.settings.redirectFileSuffix}.md`;
+	const previewPattern = `.${plugin.settings.previewFileSuffix}.`;
+
 	// File visibility styles
 	if (plugin.settings.hideSidecarsInExplorer) {
 		styleTextContent += `
@@ -461,7 +515,7 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 		}
 		`;
 	}
-	
+
 	if (plugin.settings.hideRedirectFilesInExplorer) {
 		styleTextContent += `
 		.nav-file-title[data-path$='${fullRedirectExtension}'] {
@@ -469,7 +523,7 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 		}
 		`;
 	}
-	
+
 	if (plugin.settings.hidePreviewFilesInExplorer) {
 		styleTextContent += `
 		.nav-file-title[data-path*='${previewPattern}'] {
@@ -477,7 +531,7 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 		}
 		`;
 	}
-	
+
 	if (plugin.settings.dimSidecarsInExplorer) {
 		styleTextContent += `
 		.nav-file-title[data-path$='${fullSidecarExtension}'],
@@ -528,7 +582,8 @@ export function updateSidecarCss(plugin: SidecarPlugin) {
 			padding-top: 0px !important;
 			padding-bottom: calc(2 * var(--size-4-1)) !important;
 		}
-		`;	}	// Hide default .md extensions for sidecar files (dynamic - uses template variables)
+		`;
+	} // Hide default .md extensions for sidecar files (dynamic - uses template variables)
 	styleTextContent += `
 	/* Hide default .md extensions for sidecar files */
 	.nav-file-title[data-path$='${fullSidecarExtension}'] .nav-file-tag:not(.sidecar-tag):not(.main-ext-tag):not(.redirect-tag):not(.preview-tag) {

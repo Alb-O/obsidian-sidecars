@@ -1,14 +1,13 @@
-import { loggerDebug } from '@/utils';
-import type { SidecarPluginSettings } from '@/types';
+import type { SidecarPluginSettings } from "@/types";
 import {
-	getExtension,
-	getDirname,
 	getBasename,
+	getDirname,
+	getExtension,
+	isFileAllowedByFolderLists,
 	joinPath,
+	loggerDebug,
 	toPosixPath,
-	isPathInFolderList,
-	isFileAllowedByFolderLists
-} from '@/utils';
+} from "@/utils";
 
 /**
  * Service responsible for all file path operations and validations
@@ -19,41 +18,48 @@ export class FilePathService {
 
 	constructor(settings: SidecarPluginSettings) {
 		this.settings = settings;
-		loggerDebug(this, 'FilePathService initialized');
+		loggerDebug(this, "FilePathService initialized");
 	}
 
 	/**
 	 * Update settings reference when settings change
 	 */
 	updateSettings(settings: SidecarPluginSettings): void {
-		loggerDebug(this, 'Updating settings reference');
+		loggerDebug(this, "Updating settings reference");
 		this.settings = settings;
 	}
 
 	/**
 	 * Check if a file is monitored based on extension and folder rules
 	 */
-	isMonitoredFile(filePath: string, isDerivativeFile: (path: string) => boolean): boolean {
-		loggerDebug(this, 'Checking if file is monitored', { filePath });
+	isMonitoredFile(
+		filePath: string,
+		isDerivativeFile: (path: string) => boolean,
+	): boolean {
+		loggerDebug(this, "Checking if file is monitored", { filePath });
 
 		if (isDerivativeFile(filePath)) {
-			loggerDebug(this, 'File is derivative, not monitored', { filePath });
+			loggerDebug(this, "File is derivative, not monitored", { filePath });
 			return false;
 		}
 
 		if (!isFileAllowedByFolderLists(filePath, this.settings)) {
-			loggerDebug(this, 'File not allowed by folder lists', { filePath });
+			loggerDebug(this, "File not allowed by folder lists", { filePath });
 			return false;
 		}
 
 		const extension = getExtension(filePath);
-		const isMonitored = extension ? 
-			this.settings.monitoredExtensions
-				.map(ext => ext.toLowerCase().replace(/^\./, ''))
-				.includes(extension) : 
-			false;
+		const isMonitored = extension
+			? this.settings.monitoredExtensions
+					.map((ext) => ext.toLowerCase().replace(/^\./, ""))
+					.includes(extension)
+			: false;
 
-		loggerDebug(this, 'File monitoring result', { filePath, extension, isMonitored });
+		loggerDebug(this, "File monitoring result", {
+			filePath,
+			extension,
+			isMonitored,
+		});
 		return isMonitored;
 	}
 	/**
@@ -78,7 +84,10 @@ export class FilePathService {
 	getSourcePathFromSidecar(sidecarPath: string): string | null {
 		const fullSuffix = `.${this.settings.sidecarSuffix}.md`;
 		if (sidecarPath.endsWith(fullSuffix)) {
-			const sourcePath = sidecarPath.substring(0, sidecarPath.length - fullSuffix.length);
+			const sourcePath = sidecarPath.substring(
+				0,
+				sidecarPath.length - fullSuffix.length,
+			);
 			// loggerDebug(this, 'Extracted source path from sidecar', { sidecarPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
@@ -93,11 +102,13 @@ export class FilePathService {
 		// loggerDebug(this, 'Generated redirect path', { sourcePath, redirectPath }); // Reduced logging
 		return redirectPath;
 	}
-		/**
+	/**
 	 * Check if a file is a redirect file
 	 */
 	isRedirectFile(filePath: string): boolean {
-		const isRedirect = filePath.endsWith(`.${this.settings.redirectFileSuffix}.md`);
+		const isRedirect = filePath.endsWith(
+			`.${this.settings.redirectFileSuffix}.md`,
+		);
 		// loggerDebug(this, 'Checking if file is redirect', { filePath, isRedirect }); // Reduced logging
 		return isRedirect;
 	}
@@ -115,8 +126,12 @@ export class FilePathService {
 	 * Extract source file path from redirect path
 	 */
 	getSourcePathFromRedirect(redirectPath: string): string | null {
-		const fullSuffix = `.${this.settings.redirectFileSuffix}.md`;		if (redirectPath.endsWith(fullSuffix)) {
-			const sourcePath = redirectPath.substring(0, redirectPath.length - fullSuffix.length);
+		const fullSuffix = `.${this.settings.redirectFileSuffix}.md`;
+		if (redirectPath.endsWith(fullSuffix)) {
+			const sourcePath = redirectPath.substring(
+				0,
+				redirectPath.length - fullSuffix.length,
+			);
 			// loggerDebug(this, 'Extracted source path from redirect', { redirectPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
@@ -128,10 +143,15 @@ export class FilePathService {
 	 * Extract source file path from preview path
 	 */
 	getSourcePathFromPreview(previewPath: string): string | null {
-		const previewPattern = new RegExp(`\\.${this.settings.previewFileSuffix}\\.[^.]+$`);
+		const previewPattern = new RegExp(
+			`\\.${this.settings.previewFileSuffix}\\.[^.]+$`,
+		);
 		const match = previewPath.match(previewPattern);
 		if (match) {
-			const sourcePath = previewPath.substring(0, previewPath.length - match[0].length);
+			const sourcePath = previewPath.substring(
+				0,
+				previewPath.length - match[0].length,
+			);
 			// loggerDebug(this, 'Extracted source path from preview', { previewPath, sourcePath }); // Reduced logging
 			return sourcePath;
 		}
@@ -142,7 +162,9 @@ export class FilePathService {
 	/**
 	 * Get preview file info from a preview file path
 	 */
-	getPreviewFileInfo(filePath: string): { mainPath: string; extension: string } | null {
+	getPreviewFileInfo(
+		filePath: string,
+	): { mainPath: string; extension: string } | null {
 		if (!this.isPreviewFile(filePath)) {
 			return null;
 		}
@@ -163,7 +185,7 @@ export class FilePathService {
 	/**
 	 * Generate preview file path for a source file
 	 */
-	getPreviewPath(filePath: string, extension: string = 'png'): string {
+	getPreviewPath(filePath: string, extension = "png"): string {
 		// Keep the full source filename (including extension) when generating preview path
 		const previewPath = `${filePath}.${this.settings.previewFileSuffix}.${extension}`;
 		// loggerDebug(this, 'Generated preview path', { filePath, extension, previewPath }); // Removed verbose logging
@@ -174,8 +196,14 @@ export class FilePathService {
 	 * Check if a file is any kind of derivative file (sidecar, redirect, or preview)
 	 */
 	isDerivativeFile(filePath: string): boolean {
-		const isDerivative = this.isSidecarFile(filePath) || this.isRedirectFile(filePath) || this.isPreviewFile(filePath);
-		loggerDebug(this, 'Checking if file is derivative', { filePath, isDerivative });
+		const isDerivative =
+			this.isSidecarFile(filePath) ||
+			this.isRedirectFile(filePath) ||
+			this.isPreviewFile(filePath);
+		loggerDebug(this, "Checking if file is derivative", {
+			filePath,
+			isDerivative,
+		});
 		return isDerivative;
 	}
 

@@ -1,1 +1,1 @@
-export { VaultEventHandler } from './VaultEventHandler';
+export { VaultEventHandler } from "./VaultEventHandler";

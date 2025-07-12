@@ -1,4 +1,5 @@
-import { App, Modal } from "obsidian";
+import type { App } from "obsidian";
+import { Modal } from "obsidian";
 
 let activeOrphanSidecarModal: OrphanSidecarModal | null = null;
 
@@ -14,39 +15,46 @@ export class OrphanSidecarModal extends Modal {
 		super(app);
 		this.orphanSidecars = orphanSidecars;
 		this.onAccept = onAccept;
-		activeOrphanSidecarModal = this;
+		activeOrphanSidecarModal = Object.assign(
+			Object.create(Object.getPrototypeOf(this)),
+			this,
+		);
 	}
 
 	onOpen() {
 		const { contentEl, modalEl } = this;
 		contentEl.empty();
-		modalEl.addClass('mod-orphan-sidecar-cleanup');
+		modalEl.addClass("mod-orphan-sidecar-cleanup");
 		// Set modal title in the header like the reference
-		const modalHeader = modalEl.querySelector('.modal-header');
+		const modalHeader = modalEl.querySelector(".modal-header");
 		if (modalHeader) {
-			modalHeader.createDiv('modal-title', el => {
-				el.textContent = 'Confirm orphan sidecar cleanup';
+			modalHeader.createDiv("modal-title", (el) => {
+				el.textContent = "Confirm orphan sidecar cleanup";
 			});
 		}
-		contentEl.createEl("p", { text: `The following orphan sidecars will be deleted if you proceed:` });
+		contentEl.createEl("p", {
+			text: `The following orphan sidecars will be deleted if you proceed:`,
+		});
 		const list = contentEl.createEl("ul");
-		this.orphanSidecars.forEach(path => {
+		this.orphanSidecars.forEach((path) => {
 			const li = list.createEl("li");
 			const link = li.createEl("a", {
 				text: path,
-				href: `#${path}`
+				href: `#${path}`,
 			});
 			link.onclick = async (e) => {
 				e.preventDefault();
 				// Dismiss all open modals/dialogs (including settings)
 				// @ts-ignore
-				if (this.app && this.app.closeAllModals) {
+				if (this.app?.closeAllModals) {
 					// @ts-ignore
 					this.app.closeAllModals();
 				} else {
 					// fallback: close settings modal if open
-					const modals = document.querySelectorAll('.modal-container, .modal-bg');
-					modals.forEach(m => (m as HTMLElement).remove());
+					const modals = document.querySelectorAll(
+						".modal-container, .modal-bg",
+					);
+					modals.forEach((m) => (m as HTMLElement).remove());
 				}
 				const file = this.app.vault.getAbstractFileByPath(path);
 				if (file) {
@@ -56,7 +64,7 @@ export class OrphanSidecarModal extends Modal {
 					let found = false;
 					for (const leaf of leaves) {
 						// @ts-ignore
-						if (leaf.view && leaf.view.file && leaf.view.file.path === path) {
+						if (leaf.view?.file && leaf.view.file.path === path) {
 							// @ts-ignore
 							this.app.workspace.setActiveLeaf(leaf, { focus: true });
 							found = true;
@@ -74,16 +82,16 @@ export class OrphanSidecarModal extends Modal {
 			};
 		});
 		// Button row
-		const buttonRow = contentEl.createDiv('modal-button-container');
+		const buttonRow = contentEl.createDiv("modal-button-container");
 		// Delete Orphans (left)
-		const deleteBtn = buttonRow.createEl('button', { text: 'Delete orphans' });
-		deleteBtn.addClass('mod-cta');
+		const deleteBtn = buttonRow.createEl("button", { text: "Delete orphans" });
+		deleteBtn.addClass("mod-cta");
 		deleteBtn.onclick = () => {
 			this.close();
 			this.onAccept();
 		};
 		// Cancel (right)
-		const cancelBtn = buttonRow.createEl('button', { text: 'Cancel' });
+		const cancelBtn = buttonRow.createEl("button", { text: "Cancel" });
 		cancelBtn.onclick = () => this.close();
 	}
 
