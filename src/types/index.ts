@@ -61,6 +61,7 @@ export interface SidecarPluginSettings {
 	showPreviewDecoratorOnSidecars: boolean;
 	autoCreateSidecars: boolean;
 	hideSidecarBaseNameInExplorer: boolean;
+	templateNotePath?: string;
 }
 
 export const DEFAULT_SETTINGS: SidecarPluginSettings = {
@@ -87,6 +88,7 @@ export const DEFAULT_SETTINGS: SidecarPluginSettings = {
 	showPreviewDecoratorOnSidecars: false,
 	autoCreateSidecars: true,
 	hideSidecarBaseNameInExplorer: false,
+	templateNotePath: undefined,
 };
 
 // Plugin interface for components

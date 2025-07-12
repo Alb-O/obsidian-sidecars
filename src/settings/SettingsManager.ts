@@ -1,5 +1,10 @@
 import type { App } from "obsidian";
-import { Setting, Notice, PluginSettingTab } from "obsidian";
+import {
+	Setting,
+	Notice,
+	PluginSettingTab,
+	AbstractInputSuggest,
+} from "obsidian";
 import { loggerInfo, loggerWarn, loggerError } from "@/utils";
 import { ConfirmResetModal, ConfirmDeleteAllSidecarsModal } from "@/modals";
 import type { PluginWithSettings, SidecarPluginSettings } from "@/types";
@@ -180,6 +185,77 @@ class SidecarPluginSettingTab extends PluginSettingTab {
 						);
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName("Default sidecar template note")
+			.setDesc(
+				"Pick a note from your vault to use as the template for new sidecar files. \
+				You can use the Templater plugin with the 'Trigger Templater on new file creation' option enabled to automatically apply templates on sidecar creation.",
+			)
+			.then((setting) => {
+				setting.controlEl.empty();
+				const input = document.createElement("input");
+				input.type = "text";
+				input.placeholder = "Templates/Sidecar Template";
+				input.value = this.plugin.settings.templateNotePath || "";
+				setting.controlEl.appendChild(input);
+
+				class NoteSuggest extends AbstractInputSuggest<string> {
+					plugin: PluginWithSettings;
+					constructor(
+						app: App,
+						plugin: PluginWithSettings,
+						inputEl: HTMLInputElement,
+					) {
+						super(app, inputEl);
+						this.plugin = plugin;
+					}
+					getSuggestions(query: string): string[] {
+						const files = this.plugin.app.vault.getMarkdownFiles();
+						const suffix = `.${this.plugin.settings.sidecarSuffix}.md`;
+						return files
+							.map((f) => f.path)
+							.filter(
+								(p) =>
+									// Filter out sidecars
+									!p.endsWith(suffix) &&
+									p.toLowerCase().includes(query.toLowerCase()),
+							);
+					}
+					renderSuggestion(notePath: string, el: HTMLElement) {
+						const displayName = notePath.endsWith(".md")
+							? notePath.slice(0, -3)
+							: notePath;
+						el.setText(displayName);
+					}
+					selectSuggestion(notePath: string) {
+						// Show without .md in input, but store full path
+						const displayName = notePath.endsWith(".md")
+							? notePath.slice(0, -3)
+							: notePath;
+						input.value = displayName;
+						this.plugin.settingsManager.updateSetting(
+							"templateNotePath",
+							notePath,
+						);
+						this.close();
+					}
+				}
+				new NoteSuggest(this.plugin.app, this.plugin, input);
+				input.addEventListener("change", async () => {
+					// When user types, try to match to a markdown file and store full path
+					const files = this.plugin.app.vault.getMarkdownFiles();
+					const match = files.find((f) => {
+						const base = f.path.endsWith(".md") ? f.path.slice(0, -3) : f.path;
+						return base === input.value;
+					});
+					const valueToStore = match ? match.path : input.value;
+					await this.plugin.settingsManager.updateSetting(
+						"templateNotePath",
+						valueToStore,
+					);
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Revalidate sidecars")

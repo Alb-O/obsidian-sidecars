@@ -1,6 +1,6 @@
 import type SidecarPlugin from "@/main";
 import { TFile, Notice } from "obsidian";
-import { loggerDebug, loggerInfo, loggerError } from "@/utils";
+import { loggerDebug, loggerInfo, loggerWarn, loggerError } from "@/utils";
 
 export class SidecarManager {
 	private plugin: SidecarPlugin;
@@ -58,7 +58,23 @@ export class SidecarManager {
 		try {
 			loggerDebug(this, "Creating new sidecar file", { filePath, sidecarPath });
 
-			await this.plugin.app.vault.create(sidecarPath, "");
+			let sidecarContent = "";
+			const templatePath = this.plugin.settings.templateNotePath;
+			if (templatePath) {
+				const templateFile =
+					this.plugin.app.vault.getAbstractFileByPath(templatePath);
+				if (templateFile && templateFile instanceof TFile) {
+					try {
+						sidecarContent = await this.plugin.app.vault.read(templateFile);
+					} catch (err) {
+						loggerWarn(this, "Failed to read template note for sidecar", {
+							templatePath,
+							error: err,
+						});
+					}
+				}
+			}
+			await this.plugin.app.vault.create(sidecarPath, sidecarContent);
 
 			loggerInfo(this, "Sidecar file created successfully", {
 				mainFile: filePath,
@@ -303,7 +319,30 @@ export class SidecarManager {
 
 					if (!existingSidecar) {
 						try {
-							const sidecarContent = `# ${file.basename}\n\nSidecar notes for ${file.name}\n`;
+							let sidecarContent = "";
+							const templatePath = this.plugin.settings.templateNotePath;
+							if (templatePath) {
+								const templateFile =
+									this.plugin.app.vault.getAbstractFileByPath(templatePath);
+								if (templateFile && templateFile instanceof TFile) {
+									try {
+										sidecarContent =
+											await this.plugin.app.vault.read(templateFile);
+									} catch (err) {
+										loggerWarn(
+											this,
+											"Failed to read template note for sidecar",
+											{
+												templatePath,
+												error: err,
+											},
+										);
+									}
+								}
+							}
+							if (!sidecarContent) {
+								sidecarContent = `# ${file.basename}\n\nSidecar notes for ${file.name}\n`;
+							}
 							await this.plugin.app.vault.create(sidecarPath, sidecarContent);
 							createdCount++;
 
