@@ -1,5 +1,7 @@
 # Sidecars Plugin for Obsidian
 
+⚠️ NO LONGER MAINTAINED - If you're a plugin dev, would like to take over ownership, and need some sort of formal permission, contact me.
+
 Automated management of 'sidecar' companion notes for attachments and other files.
 
 ## Getting started
